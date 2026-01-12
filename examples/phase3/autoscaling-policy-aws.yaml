@@ -1,0 +1,201 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: production-aws-autoscaling
+spec:
+  # Enable autoscaling
+  enabled: true
+
+  # Cloud provider
+  provider: aws
+
+  # Scale-up when GPU utilization > 80%
+  scaleUpThreshold: 0.8
+  # Scale-up cooldown: 3 minutes
+  scaleUpCooldownSeconds: 180
+  # Scale up if pods pending for > 2 minutes
+  pendingPodTimeoutSeconds: 120
+
+  # Scale-down when GPU utilization < 20%
+  scaleDownThreshold: 0.2
+  # Scale-down cooldown: 10 minutes
+  scaleDownCooldownSeconds: 600
+
+  # Cluster size limits
+  minNodes: 0
+  maxNodes: 100
+
+  # Spot instance configuration
+  spotInstancePercentage: 0.6  # 60% spot instances
+  enableSpotInstances: true
+
+  # Multi-tier scaling (spot → on-demand → reserved)
+  enableMultiTierScaling: true
+
+  # Predictive scaling (disabled by default)
+  enablePredictiveScaling: false
+
+  # Node pools
+  nodePools:
+    # Primary: Spot instances for cost savings
+    - name: spot-pool
+      minSize: 0
+      maxSize: 50
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge   # 1x V100, $1.20/hr spot
+        - p3.8xlarge   # 4x V100, $4.80/hr spot
+        - g4dn.12xlarge # 4x T4, diversify
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-autoscaler.io/pool: spot-pool
+        gpu-autoscaler.io/instance-family: p3
+      availabilityZones:
+        - us-west-2a
+        - us-west-2b
+        - us-west-2c
+
+    # Fallback: On-demand instances for reliability
+    - name: on-demand-pool
+      minSize: 0
+      maxSize: 30
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge   # 1x V100, $3.06/hr
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-autoscaler.io/pool: on-demand-pool
+      availabilityZones:
+        - us-west-2a
+        - us-west-2b
+
+    # Baseline: Reserved instances (if available)
+    - name: reserved-pool
+      minSize: 2
+      maxSize: 10
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge
+      capacityType: reserved
+      priority: 1
+      labels:
+        gpu-autoscaler.io/capacity-type: reserved
+        gpu-autoscaler.io/pool: reserved-pool
+
+  # Only autoscale nodes with this label
+  nodeSelector:
+    node.kubernetes.io/instance-type: p3.2xlarge
+
+---
+# Example: Autoscaling policy with predictive scaling
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: ml-team-predictive-autoscaling
+spec:
+  enabled: true
+  provider: aws
+
+  scaleUpThreshold: 0.75
+  scaleDownThreshold: 0.25
+  scaleUpCooldownSeconds: 120
+  scaleDownCooldownSeconds: 600
+  pendingPodTimeoutSeconds: 90
+
+  minNodes: 2  # Keep 2 nodes always available
+  maxNodes: 50
+
+  spotInstancePercentage: 0.7  # Aggressive spot usage
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: true  # Enable predictive scaling
+
+  nodePools:
+    - name: ml-spot-pool
+      minSize: 2
+      maxSize: 40
+      gpuType: nvidia-tesla-a100
+      instanceTypes:
+        - p4d.24xlarge  # 8x A100, 40GB
+        - p4de.24xlarge # 8x A100, 80GB
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        team: ml
+        gpu-autoscaler.io/capacity-type: spot
+      availabilityZones:
+        - us-east-1a
+        - us-east-1b
+        - us-east-1c
+
+    - name: ml-on-demand-pool
+      minSize: 0
+      maxSize: 10
+      gpuType: nvidia-tesla-a100
+      instanceTypes:
+        - p4d.24xlarge
+      capacityType: on-demand
+      priority: 5
+      labels:
+        team: ml
+        gpu-autoscaler.io/capacity-type: on-demand
+
+---
+# Example: Conservative autoscaling for production
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: production-conservative
+spec:
+  enabled: true
+  provider: aws
+
+  # More conservative thresholds
+  scaleUpThreshold: 0.85
+  scaleDownThreshold: 0.15
+  scaleUpCooldownSeconds: 300  # 5 minutes
+  scaleDownCooldownSeconds: 900  # 15 minutes
+  pendingPodTimeoutSeconds: 180  # 3 minutes
+
+  minNodes: 5  # Always keep 5 nodes
+  maxNodes: 50
+
+  # Less aggressive spot usage
+  spotInstancePercentage: 0.3  # Only 30% spot
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: false
+
+  nodePools:
+    - name: production-on-demand
+      minSize: 5
+      maxSize: 35
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge
+      capacityType: on-demand
+      priority: 10
+      labels:
+        environment: production
+        gpu-autoscaler.io/capacity-type: on-demand
+
+    - name: production-spot
+      minSize: 0
+      maxSize: 15
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge
+        - p3.8xlarge
+        - g4dn.12xlarge
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 5
+      labels:
+        environment: production
+        gpu-autoscaler.io/capacity-type: spot

@@ -1,0 +1,177 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: production-azure-autoscaling
+spec:
+  enabled: true
+  provider: azure
+
+  scaleUpThreshold: 0.8
+  scaleDownThreshold: 0.2
+  scaleUpCooldownSeconds: 180
+  scaleDownCooldownSeconds: 600
+  pendingPodTimeoutSeconds: 120
+
+  minNodes: 0
+  maxNodes: 100
+
+  # Azure spot instances
+  spotInstancePercentage: 0.6
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: false
+
+  nodePools:
+    # Spot pool
+    - name: spot-pool
+      minSize: 0
+      maxSize: 50
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - Standard_NC6s_v3     # 1x V100
+        - Standard_NC12s_v3    # 2x V100
+        - Standard_NC24s_v3    # 4x V100
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-autoscaler.io/pool: spot-pool
+        kubernetes.azure.com/scalesetpriority: spot
+      availabilityZones:
+        - "1"
+        - "2"
+        - "3"
+
+    # On-demand pool (pay-as-you-go)
+    - name: on-demand-pool
+      minSize: 0
+      maxSize: 30
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - Standard_NC6s_v3
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-autoscaler.io/pool: on-demand-pool
+      availabilityZones:
+        - "1"
+        - "2"
+
+---
+# Example: T4 autoscaling on Azure
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: t4-azure-autoscaling
+spec:
+  enabled: true
+  provider: azure
+
+  scaleUpThreshold: 0.75
+  scaleDownThreshold: 0.25
+  scaleUpCooldownSeconds: 120
+  scaleDownCooldownSeconds: 600
+  pendingPodTimeoutSeconds: 90
+
+  minNodes: 2
+  maxNodes: 40
+
+  spotInstancePercentage: 0.7
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: false
+
+  nodePools:
+    # T4 spot pool
+    - name: t4-spot-pool
+      minSize: 2
+      maxSize: 30
+      gpuType: nvidia-tesla-t4
+      instanceTypes:
+        - Standard_NC4as_T4_v3   # 1x T4
+        - Standard_NC8as_T4_v3   # 2x T4
+        - Standard_NC16as_T4_v3  # 4x T4
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-type: t4
+        workload: inference
+      availabilityZones:
+        - "1"
+        - "2"
+        - "3"
+
+    # T4 on-demand pool
+    - name: t4-on-demand-pool
+      minSize: 0
+      maxSize: 10
+      gpuType: nvidia-tesla-t4
+      instanceTypes:
+        - Standard_NC4as_T4_v3
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-type: t4
+
+---
+# Example: A100 autoscaling on Azure
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: a100-azure-autoscaling
+spec:
+  enabled: true
+  provider: azure
+
+  scaleUpThreshold: 0.8
+  scaleDownThreshold: 0.2
+  scaleUpCooldownSeconds: 180
+  scaleDownCooldownSeconds: 900
+  pendingPodTimeoutSeconds: 120
+
+  minNodes: 1
+  maxNodes: 10
+
+  spotInstancePercentage: 0.4  # Less spot for expensive A100
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: true
+
+  nodePools:
+    # A100 spot pool
+    - name: a100-spot-pool
+      minSize: 0
+      maxSize: 5
+      gpuType: nvidia-a100-80gb
+      instanceTypes:
+        - Standard_ND96asr_v4        # 8x A100 40GB
+        - Standard_ND96amsr_A100_v4  # 8x A100 80GB
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-type: a100
+      availabilityZones:
+        - "1"
+        - "2"
+
+    # A100 on-demand pool
+    - name: a100-on-demand-pool
+      minSize: 1
+      maxSize: 5
+      gpuType: nvidia-a100-80gb
+      instanceTypes:
+        - Standard_ND96asr_v4
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-type: a100
+      availabilityZones:
+        - "1"
