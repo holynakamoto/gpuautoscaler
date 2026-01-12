@@ -116,7 +116,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
         "targets": [
           {
-            "expr": "rate(gpu_autoscaler_total_cost_usd[5m]) * 3600",
+            "expr": "gpu_autoscaler_hourly_cost_rate_usd",
             "legendFormat": "Cost Rate ($/hour)"
           }
         ],
