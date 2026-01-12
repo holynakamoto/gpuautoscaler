@@ -1,0 +1,88 @@
+{{- if .Values.grafana.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-autoscaler-dashboards
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: gpu-autoscaler
+    app.kubernetes.io/component: dashboards
+    grafana_dashboard: "1"
+data:
+  gpu-cluster-overview.json: |
+    {
+      "dashboard": {
+        "title": "GPU Cluster Overview",
+        "tags": ["gpu", "nvidia", "autoscaler"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "GPU Utilization",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_GPU_UTIL",
+                "legendFormat": "{{kubernetes_node}} - GPU {{gpu}}"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "GPU Memory Utilization",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "(DCGM_FI_DEV_FB_USED / DCGM_FI_DEV_FB_TOTAL) * 100",
+                "legendFormat": "{{kubernetes_node}} - GPU {{gpu}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "GPU Temperature",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_GPU_TEMP",
+                "legendFormat": "{{kubernetes_node}} - GPU {{gpu}}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "GPU Power Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_POWER_USAGE",
+                "legendFormat": "{{kubernetes_node}} - GPU {{gpu}}"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Average GPU Utilization",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "avg(DCGM_FI_DEV_GPU_UTIL)",
+                "legendFormat": "Average"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "GPU Utilization Heatmap",
+            "type": "heatmap",
+            "targets": [
+              {
+                "expr": "DCGM_FI_DEV_GPU_UTIL",
+                "legendFormat": "{{kubernetes_node}}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+{{- end }}

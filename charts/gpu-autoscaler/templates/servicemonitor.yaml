@@ -1,0 +1,21 @@
+{{- if and .Values.dcgmExporter.enabled .Values.dcgmExporter.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dcgm-exporter
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: metrics
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcgm-exporter
+  endpoints:
+  - port: metrics
+    interval: {{ .Values.dcgmExporter.serviceMonitor.interval }}
+    scrapeTimeout: 10s
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: kubernetes_node
+{{- end }}
