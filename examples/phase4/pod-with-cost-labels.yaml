@@ -51,6 +51,10 @@ metadata:
     workload-type: inference
     model: bert-base
     service-tier: production
+  # Annotations for GPU autoscaler
+  annotations:
+    gpu-autoscaler.io/sharing-mode: "mps"
+    gpu-autoscaler.io/optimize: "true"
 
 spec:
   containers:
@@ -67,8 +71,3 @@ spec:
           value: "/models/bert-base"
         - name: BATCH_SIZE
           value: "32"
-
-  # Annotations for GPU autoscaler
-  annotations:
-    gpu-autoscaler.io/sharing-mode: "mps"
-    gpu-autoscaler.io/optimize: "true"
