@@ -1,0 +1,76 @@
+{{- if .Values.dcgmExporter.enabled -}}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dcgm-exporter
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcgm-exporter
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dcgm-exporter
+        app.kubernetes.io/component: metrics
+    spec:
+      nodeSelector:
+        {{- toYaml .Values.dcgmExporter.nodeSelector | nindent 8 }}
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: dcgm-exporter
+        image: "{{ .Values.dcgmExporter.image.repository }}:{{ .Values.dcgmExporter.image.tag }}"
+        imagePullPolicy: {{ .Values.dcgmExporter.image.pullPolicy }}
+        env:
+        - name: DCGM_EXPORTER_LISTEN
+          value: ":9400"
+        - name: DCGM_EXPORTER_KUBERNETES
+          value: "true"
+        ports:
+        - name: metrics
+          containerPort: 9400
+          protocol: TCP
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+        volumeMounts:
+        - name: pod-gpu-resources
+          readOnly: true
+          mountPath: /var/lib/kubelet/pod-resources
+        resources:
+          {{- toYaml .Values.dcgmExporter.resources | nindent 10 }}
+      volumes:
+      - name: pod-gpu-resources
+        hostPath:
+          path: /var/lib/kubelet/pod-resources
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dcgm-exporter
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: metrics
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 9400
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app.kubernetes.io/name: dcgm-exporter
+{{- end }}

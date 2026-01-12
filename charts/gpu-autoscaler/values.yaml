@@ -1,0 +1,207 @@
+# Default values for gpu-autoscaler
+
+# Controller configuration
+controller:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: gpuautoscaler/controller
+    pullPolicy: IfNotPresent
+    tag: "v0.1.0"
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  leaderElection: true
+
+  prometheusURL: "http://prometheus-operated:9090"
+
+  # Webhook configuration
+  webhook:
+    enabled: true
+    port: 9443
+    certManager:
+      enabled: true
+
+# DCGM Exporter for GPU metrics
+dcgmExporter:
+  enabled: true
+  image:
+    repository: nvcr.io/nvidia/k8s/dcgm-exporter
+    pullPolicy: IfNotPresent
+    tag: "3.1.8-3.1.5-ubuntu22.04"
+
+  # Run as DaemonSet on GPU nodes
+  nodeSelector:
+    nvidia.com/gpu.present: "true"
+
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # DCGM metrics collection interval
+  scrapeInterval: 10s
+
+  # Service Monitor for Prometheus
+  serviceMonitor:
+    enabled: true
+    interval: 10s
+
+# Prometheus configuration
+prometheus:
+  enabled: true
+
+  server:
+    persistentVolume:
+      enabled: true
+      size: 50Gi
+
+    retention: "7d"
+
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+  # Prometheus Operator
+  prometheusOperator:
+    enabled: true
+
+# Grafana configuration
+grafana:
+  enabled: true
+
+  adminPassword: "admin"  # Change in production!
+
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Pre-configured dashboards
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'gpu-autoscaler'
+        orgId: 1
+        folder: 'GPU Autoscaler'
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/gpu-autoscaler
+
+  dashboardsConfigMaps:
+    gpu-autoscaler: "gpu-autoscaler-dashboards"
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-operated:9090
+        access: proxy
+        isDefault: true
+
+# Cost tracking (requires TimescaleDB)
+cost:
+  enabled: false
+
+  timescaledb:
+    enabled: false
+    # If enabled, deploys TimescaleDB for cost data
+    image:
+      repository: timescale/timescaledb
+      tag: "latest-pg14"
+
+    persistence:
+      enabled: true
+      size: 20Gi
+
+# Autoscaling configuration
+autoscaling:
+  enabled: true
+
+  # Scale-up triggers
+  scaleUp:
+    # Scale up when pending GPU pods exist for > 2 minutes
+    pendingPodThreshold: 2m
+    # Scale up when cluster GPU utilization > 80%
+    utilizationThreshold: 80
+
+  # Scale-down triggers
+  scaleDown:
+    # Scale down when node idle for > 10 minutes
+    idleThreshold: 10m
+    # Scale down when node GPU utilization < 20%
+    utilizationThreshold: 20
+
+  # Spot instance configuration
+  spot:
+    enabled: true
+    # Percentage of workloads to run on spot instances
+    targetPercentage: 60
+
+# GPU sharing configuration
+sharing:
+  # NVIDIA MIG support
+  mig:
+    enabled: false
+    # Auto-configure MIG profiles based on workload demand
+    autoConfig: true
+
+  # NVIDIA MPS support
+  mps:
+    enabled: false
+    # MPS server resource limits
+    resources:
+      memoryLimitMB: 1024
+
+  # Time-slicing support
+  timeSlicing:
+    enabled: false
+    # Quantum duration in milliseconds
+    quantum: 100
+
+# Admission webhook
+admissionWebhook:
+  enabled: true
+
+  # Rewrite pod GPU requests based on historical usage
+  rewriteRequests: true
+
+  # Fail open if webhook is unavailable
+  failurePolicy: Ignore
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Service Account
+serviceAccount:
+  create: true
+  name: gpu-autoscaler
+
+# Namespace
+namespace: gpu-autoscaler-system

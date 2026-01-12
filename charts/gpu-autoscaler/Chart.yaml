@@ -1,0 +1,29 @@
+apiVersion: v2
+name: gpu-autoscaler
+description: A Kubernetes-native system to maximize GPU cluster utilization and minimize costs
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - gpu
+  - nvidia
+  - autoscaling
+  - kubernetes
+  - cost-optimization
+  - ml
+  - ai
+home: https://github.com/gpuautoscaler/gpuautoscaler
+sources:
+  - https://github.com/gpuautoscaler/gpuautoscaler
+maintainers:
+  - name: GPU Autoscaler Team
+    email: maintainers@gpuautoscaler.io
+dependencies:
+  - name: prometheus
+    version: "25.8.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: prometheus.enabled
+  - name: grafana
+    version: "7.0.0"
+    repository: "https://grafana.github.io/helm-charts"
+    condition: grafana.enabled
