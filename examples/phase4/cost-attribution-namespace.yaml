@@ -1,0 +1,29 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: CostAttribution
+metadata:
+  name: ml-training-costs
+spec:
+  # Track costs for specific namespace
+  namespace: ml-training
+
+  # Attribution metadata
+  team: ml-engineering
+  project: nlp-models
+  costCenter: research-ml
+
+  # Retain cost data for 90 days
+  retentionDays: 90
+
+---
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: CostAttribution
+metadata:
+  name: inference-costs
+spec:
+  namespace: inference-prod
+
+  team: ml-platform
+  project: model-serving
+  costCenter: production-ml
+
+  retentionDays: 180  # Keep longer for production analysis

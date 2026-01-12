@@ -1,0 +1,30 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: CostBudget
+metadata:
+  name: data-science-team-budget
+spec:
+  # Team-specific budget
+  monthlyLimit: 15000
+
+  scope:
+    teams:
+      - data-science
+    # Optional: also filter by labels
+    labels:
+      cost-center: "research"
+
+  alerts:
+    - name: approaching-limit
+      thresholdPercent: 90
+      severity: critical
+      channels:
+        - type: webhook
+          config:
+            url: "https://api.company.com/budget-alerts"
+            auth_header: "Bearer YOUR_API_TOKEN"
+
+  enforcement:
+    action: block  # Block new GPU pod creation when budget exceeded
+    gracePeriodMinutes: 30
+
+  enabled: true
