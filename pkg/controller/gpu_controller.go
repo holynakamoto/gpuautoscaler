@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gpuautoscaler/gpuautoscaler/pkg/metrics"
+	"github.com/holynakamoto/gpuautoscaler/pkg/scheduler"
+	"github.com/holynakamoto/gpuautoscaler/pkg/sharing"
 )
 
 const (
@@ -36,6 +38,14 @@ type GPUController struct {
 	Scheme           *runtime.Scheme
 	Log              logr.Logger
 	MetricsCollector *metrics.Collector
+	Scheduler        *scheduler.BinPackingScheduler
+	MIGManager       *sharing.MIGManager
+	MPSManager       *sharing.MPSManager
+	TSManager        *sharing.TimeSlicingManager
+	EnableBinPacking bool
+	EnableMIG        bool
+	EnableMPS        bool
+	EnableTS         bool
 }
 
 // NewGPUController creates a new GPU controller
@@ -44,6 +54,14 @@ func NewGPUController(client client.Client, log logr.Logger, metricsCollector *m
 		Client:           client,
 		Log:              log,
 		MetricsCollector: metricsCollector,
+		Scheduler:        scheduler.NewBinPackingScheduler(client, scheduler.BestFit),
+		MIGManager:       sharing.NewMIGManager(client),
+		MPSManager:       sharing.NewMPSManager(client),
+		TSManager:        sharing.NewTimeSlicingManager(client),
+		EnableBinPacking: true,
+		EnableMIG:        false, // Disabled by default, enable via Helm values
+		EnableMPS:        false,
+		EnableTS:         false,
 	}
 }
 
@@ -239,4 +257,101 @@ func GetGPUCount(pod *corev1.Pod) int {
 		}
 	}
 	return count
+}
+
+// RunBinPackingAnalysis runs the bin-packing algorithm to consolidate workloads
+func (r *GPUController) RunBinPackingAnalysis(ctx context.Context) error {
+	if !r.EnableBinPacking {
+		return nil
+	}
+
+	r.Log.Info("Running bin-packing analysis")
+
+	result, err := r.Scheduler.PackWorkloads(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to pack workloads: %w", err)
+	}
+
+	r.Log.Info("Bin-packing analysis complete",
+		"consolidatedPods", result.ConsolidatedPods,
+		"savedGPUs", result.SavedGPUs,
+		"placements", len(result.Placements))
+
+	return nil
+}
+
+// RunConsolidationAnalysis analyzes consolidation opportunities
+func (r *GPUController) RunConsolidationAnalysis(ctx context.Context) error {
+	if !r.EnableBinPacking {
+		return nil
+	}
+
+	r.Log.Info("Running consolidation analysis")
+
+	report, err := r.Scheduler.AnalyzeConsolidationOpportunities(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to analyze consolidation: %w", err)
+	}
+
+	if report.UnderutilizedNodes > 0 {
+		r.Log.Info("Consolidation opportunities found",
+			"underutilizedNodes", report.UnderutilizedNodes,
+			"potentialSavings", report.PotentialSavings,
+			"recommendations", len(report.Recommendations))
+
+		for _, rec := range report.Recommendations {
+			r.Log.Info("Consolidation recommendation", "message", rec)
+		}
+	}
+
+	return nil
+}
+
+// EstimateSharingS avings estimates savings from GPU sharing mechanisms
+func (r *GPUController) EstimateSharingSavings(ctx context.Context) error {
+	r.Log.Info("Estimating GPU sharing savings")
+
+	// MIG savings
+	if r.EnableMIG {
+		migReport, err := r.MIGManager.EstimateMIGSavings(ctx)
+		if err != nil {
+			r.Log.Error(err, "Failed to estimate MIG savings")
+		} else if migReport.MIGEligiblePods > 0 {
+			r.Log.Info("MIG savings estimate",
+				"totalPods", migReport.TotalPods,
+				"eligiblePods", migReport.MIGEligiblePods,
+				"potentialSavedGPUs", fmt.Sprintf("%.1f", migReport.PotentialSavedGPUs),
+				"savingsPct", fmt.Sprintf("%.1f%%", migReport.EstimatedSavingsPct))
+		}
+	}
+
+	// MPS savings
+	if r.EnableMPS {
+		mpsReport, err := r.MPSManager.EstimateMPSSavings(ctx)
+		if err != nil {
+			r.Log.Error(err, "Failed to estimate MPS savings")
+		} else if mpsReport.MPSEligiblePods > 0 {
+			r.Log.Info("MPS savings estimate",
+				"totalPods", mpsReport.TotalPods,
+				"eligiblePods", mpsReport.MPSEligiblePods,
+				"potentialSavedGPUs", fmt.Sprintf("%.1f", mpsReport.PotentialSavedGPUs),
+				"savingsPct", fmt.Sprintf("%.1f%%", mpsReport.EstimatedSavingsPct))
+		}
+	}
+
+	// Time-slicing savings
+	if r.EnableTS {
+		tsReport, err := r.TSManager.EstimateTimeSlicingSavings(ctx, 4)
+		if err != nil {
+			r.Log.Error(err, "Failed to estimate time-slicing savings")
+		} else if tsReport.TimeSlicingEligible > 0 {
+			r.Log.Info("Time-slicing savings estimate",
+				"totalPods", tsReport.TotalPods,
+				"eligiblePods", tsReport.TimeSlicingEligible,
+				"potentialSavedGPUs", fmt.Sprintf("%.1f", tsReport.PotentialSavedGPUs),
+				"savingsPct", fmt.Sprintf("%.1f%%", tsReport.EstimatedSavingsPct))
+		}
+	}
+
+	return nil
 }

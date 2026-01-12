@@ -1,0 +1,55 @@
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUSharingPolicy
+metadata:
+  name: development-timeslicing
+spec:
+  # Use time-slicing for development workloads
+  strategy: timeslicing
+
+  # Apply to development and testing pods
+  podSelector:
+    matchExpressions:
+      - key: gpu-autoscaler.io/workload-type
+        operator: In
+        values:
+          - development
+          - testing
+          - jupyter
+
+  # Lower priority than production workloads
+  priority: 5
+
+  # Time-slicing configuration
+  timeSlicingConfig:
+    # Create 4 virtual GPUs per physical GPU
+    replicasPerGPU: 4
+    # Time slice duration (100ms is a good default)
+    sliceMs: 100
+    # Fairness mode: roundrobin, priority, or weighted
+    fairnessMode: roundrobin
+
+---
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUSharingPolicy
+metadata:
+  name: batch-jobs-timeslicing
+spec:
+  # Use time-slicing for batch processing
+  strategy: timeslicing
+
+  # Apply to batch job pods
+  podSelector:
+    matchLabels:
+      gpu-autoscaler.io/workload-type: batch
+
+  namespaceSelector:
+    matchLabels:
+      workload-class: batch
+
+  priority: 6
+
+  timeSlicingConfig:
+    # More aggressive time-slicing for batch workloads
+    replicasPerGPU: 8
+    sliceMs: 50
+    fairnessMode: priority

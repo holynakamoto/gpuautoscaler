@@ -163,28 +163,59 @@ autoscaling:
     # Percentage of workloads to run on spot instances
     targetPercentage: 60
 
-# GPU sharing configuration
+# Bin-packing configuration (Phase 2)
+binPacking:
+  enabled: true
+  # Packing strategy: bestfit, firstfit, worstfit
+  strategy: bestfit
+  # Run packing analysis interval
+  analysisInterval: 5m
+  # Enable automatic workload consolidation
+  autoConsolidate: false  # Manual for safety
+
+# GPU sharing configuration (Phase 2)
 sharing:
-  # NVIDIA MIG support
+  # NVIDIA MIG support (Multi-Instance GPU)
   mig:
     enabled: false
     # Auto-configure MIG profiles based on workload demand
     autoConfig: true
+    # Supported profiles: 1g.5gb, 2g.10gb, 3g.20gb, 4g.20gb, 7g.40gb
+    # For 80GB A100: 1g.10gb, 2g.20gb, 3g.40gb, 4g.40gb, 7g.80gb
+    defaultProfile: "1g.5gb"
+    # Enable MIG on specific nodes (via node labels)
+    nodeSelector:
+      nvidia.com/mig.capable: "true"
 
-  # NVIDIA MPS support
+  # NVIDIA MPS support (Multi-Process Service)
   mps:
     enabled: false
+    # Maximum concurrent MPS clients per GPU
+    maxClients: 16
+    # Default active thread percentage per client
+    defaultActiveThreads: 100
     # MPS server resource limits
     resources:
       memoryLimitMB: 1024
+    # Enable MPS on specific nodes
+    nodeSelector:
+      nvidia.com/mps.capable: "true"
 
   # Time-slicing support
   timeSlicing:
     enabled: false
-    # Quantum duration in milliseconds
-    quantum: 100
+    # Number of virtual GPUs per physical GPU
+    replicasPerGPU: 4
+    # Time slice duration in milliseconds
+    sliceMs: 100
+    # Fairness mode: roundrobin, priority, weighted
+    fairnessMode: roundrobin
+    # Enable time-slicing on specific nodes
+    nodeSelector: {}
+    # Allow oversubscription
+    oversubscribe: false
 
-# Admission webhook
+# Admission webhook (Phase 2 - Zero-touch optimization)
 admissionWebhook:
   enabled: true
 
@@ -193,6 +224,56 @@ admissionWebhook:
 
   # Fail open if webhook is unavailable
   failurePolicy: Ignore
+
+  # Optimization strategies (enabled by webhook)
+  optimization:
+    # Enable automatic MIG conversion for eligible workloads
+    enableMIG: false
+    # Enable automatic MPS conversion for inference workloads
+    enableMPS: false
+    # Enable automatic time-slicing for dev/batch workloads
+    enableTimeSlicing: false
+    # Workload type detection (auto-detect from labels/annotations)
+    autoDetectWorkloadType: true
+
+  # Namespace exemptions (skip optimization for these namespaces)
+  exemptNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+
+# GPU Sharing Policies (Phase 2 CRDs)
+gpuSharingPolicies:
+  enabled: true
+  # Default policies to create on install
+  defaultPolicies:
+    # Policy for inference workloads
+    - name: inference-mps
+      strategy: mps
+      podSelector:
+        matchLabels:
+          gpu-autoscaler.io/workload-type: inference
+      priority: 10
+
+    # Policy for development workloads
+    - name: development-timeslicing
+      strategy: timeslicing
+      podSelector:
+        matchLabels:
+          gpu-autoscaler.io/workload-type: development
+      priority: 5
+      timeSlicingConfig:
+        replicasPerGPU: 4
+
+    # Policy for small batch workloads
+    - name: batch-mig
+      strategy: mig
+      podSelector:
+        matchLabels:
+          gpu-autoscaler.io/workload-type: batch
+      priority: 8
+      migConfig:
+        autoSelectProfile: true
 
 # RBAC configuration
 rbac:
