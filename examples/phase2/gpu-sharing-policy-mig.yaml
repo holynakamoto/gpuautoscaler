@@ -1,0 +1,33 @@
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUSharingPolicy
+metadata:
+  name: small-workloads-mig
+spec:
+  # Use MIG for small batch workloads
+  strategy: mig
+
+  # Apply to pods with specific labels
+  podSelector:
+    matchLabels:
+      gpu-autoscaler.io/workload-type: batch
+    matchExpressions:
+      - key: gpu-autoscaler.io/memory-requirement
+        operator: In
+        values:
+          - small
+          - medium
+
+  # Apply to specific namespaces
+  namespaceSelector:
+    matchLabels:
+      gpu-autoscaler.io/sharing-enabled: "true"
+
+  # Higher priority policies take precedence
+  priority: 10
+
+  # MIG-specific configuration
+  migConfig:
+    # Auto-select the best MIG profile based on workload requirements
+    autoSelectProfile: true
+    # Or specify a fixed profile:
+    # profile: "1g.5gb"

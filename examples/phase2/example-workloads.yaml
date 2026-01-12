@@ -1,0 +1,143 @@
+# Example 1: Inference workload (will be optimized with MPS)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: inference-model-server
+  labels:
+    gpu-autoscaler.io/workload-type: inference
+  annotations:
+    gpu-autoscaler.io/sharing: enabled
+spec:
+  containers:
+  - name: model-server
+    image: pytorch/torchserve:latest
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+        memory: 4Gi
+      limits:
+        nvidia.com/gpu: 1
+        memory: 4Gi
+
+---
+# Example 2: Batch processing (will be optimized with MIG)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: batch-processing
+  labels:
+    gpu-autoscaler.io/workload-type: batch
+    gpu-autoscaler.io/memory-requirement: small
+  annotations:
+    gpu-autoscaler.io/sharing: enabled
+spec:
+  template:
+    spec:
+      containers:
+      - name: processor
+        image: python:3.9
+        command: ["python", "process.py"]
+        resources:
+          requests:
+            nvidia.com/gpu: 1
+            memory: 2Gi
+          limits:
+            nvidia.com/gpu: 1
+            memory: 2Gi
+      restartPolicy: OnFailure
+
+---
+# Example 3: Development Jupyter notebook (will be optimized with time-slicing)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jupyter-development
+  labels:
+    gpu-autoscaler.io/workload-type: development
+  annotations:
+    gpu-autoscaler.io/sharing: enabled
+spec:
+  containers:
+  - name: jupyter
+    image: jupyter/tensorflow-notebook:latest
+    ports:
+    - containerPort: 8888
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+        memory: 8Gi
+      limits:
+        nvidia.com/gpu: 1
+        memory: 8Gi
+
+---
+# Example 4: Training workload (will NOT be optimized - exclusive GPU)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: training-large-model
+  labels:
+    gpu-autoscaler.io/workload-type: training
+  annotations:
+    gpu-autoscaler.io/sharing: disabled
+    gpu-autoscaler.io/optimize: "false"  # Explicitly disable optimization
+spec:
+  containers:
+  - name: trainer
+    image: pytorch/pytorch:latest
+    command: ["python", "train.py"]
+    resources:
+      requests:
+        nvidia.com/gpu: 8
+        memory: 128Gi
+      limits:
+        nvidia.com/gpu: 8
+        memory: 128Gi
+
+---
+# Example 5: Explicit MIG profile selection
+apiVersion: v1
+kind: Pod
+metadata:
+  name: small-inference-mig
+  labels:
+    gpu-autoscaler.io/workload-type: inference
+  annotations:
+    gpu-autoscaler.io/sharing: enabled
+    gpu-autoscaler.io/sharing-mode: mig
+    gpu-autoscaler.io/mig-profile: "1g.5gb"
+spec:
+  containers:
+  - name: inference
+    image: tritonserver:latest
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+        memory: 4Gi
+      limits:
+        nvidia.com/gpu: 1
+        memory: 4Gi
+
+---
+# Example 6: Explicit MPS enablement
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-process-inference
+  labels:
+    gpu-autoscaler.io/workload-type: inference
+  annotations:
+    gpu-autoscaler.io/sharing: enabled
+    gpu-autoscaler.io/sharing-mode: mps
+    gpu-autoscaler.io/mps-enabled: "true"
+spec:
+  containers:
+  - name: inference
+    image: tensorflow/serving:latest
+    resources:
+      requests:
+        nvidia.com/gpu: 1
+        memory: 2Gi
+      limits:
+        nvidia.com/gpu: 1
+        memory: 2Gi

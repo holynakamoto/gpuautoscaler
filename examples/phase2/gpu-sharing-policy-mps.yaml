@@ -1,0 +1,49 @@
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUSharingPolicy
+metadata:
+  name: inference-workloads-mps
+spec:
+  # Use MPS for inference workloads
+  strategy: mps
+
+  # Apply to inference pods
+  podSelector:
+    matchLabels:
+      gpu-autoscaler.io/workload-type: inference
+
+  # Medium priority
+  priority: 8
+
+  # MPS-specific configuration
+  mpsConfig:
+    # Maximum number of concurrent MPS clients per GPU
+    maxClients: 16
+    # Default active thread percentage per client
+    defaultActiveThreads: 100
+    # Memory limit per client in MB (0 = no limit)
+    memoryLimitMB: 2048
+
+---
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUSharingPolicy
+metadata:
+  name: serving-workloads-mps
+spec:
+  # Use MPS for model serving workloads
+  strategy: mps
+
+  # Apply to serving pods in production namespace
+  podSelector:
+    matchLabels:
+      app: model-server
+
+  namespaceSelector:
+    matchLabels:
+      environment: production
+
+  priority: 9
+
+  mpsConfig:
+    maxClients: 8  # Lower for production workloads
+    defaultActiveThreads: 100
+    memoryLimitMB: 4096  # Higher memory limit for serving

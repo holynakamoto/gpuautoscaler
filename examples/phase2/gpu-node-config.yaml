@@ -1,0 +1,75 @@
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUNodeConfig
+metadata:
+  name: gpu-node-01-config
+spec:
+  # Target node name
+  nodeName: gpu-node-01
+
+  # Enable NVIDIA MIG
+  migEnabled: true
+  # Configure MIG profiles (for A100-40GB)
+  migProfiles:
+    - "1g.5gb"
+    - "2g.10gb"
+
+  # Enable NVIDIA MPS
+  mpsEnabled: false
+
+  # Enable time-slicing
+  timeSlicingEnabled: false
+
+---
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUNodeConfig
+metadata:
+  name: gpu-node-02-config
+spec:
+  # Target node for inference workloads
+  nodeName: gpu-node-02
+
+  # Disable MIG
+  migEnabled: false
+
+  # Enable MPS for inference
+  mpsEnabled: true
+  mpsMaxClients: 16
+
+  # Disable time-slicing
+  timeSlicingEnabled: false
+
+---
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUNodeConfig
+metadata:
+  name: gpu-node-03-config
+spec:
+  # Target node for development workloads
+  nodeName: gpu-node-03
+
+  # Disable MIG and MPS
+  migEnabled: false
+  mpsEnabled: false
+
+  # Enable time-slicing
+  timeSlicingEnabled: true
+  timeSlicingReplicas: 4
+
+---
+apiVersion: gpuautoscaler.io/v1alpha1
+kind: GPUNodeConfig
+metadata:
+  name: gpu-node-a100-80gb
+spec:
+  # High-memory A100 node
+  nodeName: gpu-node-a100-80gb
+
+  # Enable MIG with 80GB profiles
+  migEnabled: true
+  migProfiles:
+    - "1g.10gb"
+    - "2g.20gb"
+    - "3g.40gb"
+
+  mpsEnabled: false
+  timeSlicingEnabled: false
