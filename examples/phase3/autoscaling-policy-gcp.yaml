@@ -1,0 +1,117 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: production-gcp-autoscaling
+spec:
+  enabled: true
+  provider: gcp
+
+  scaleUpThreshold: 0.8
+  scaleDownThreshold: 0.2
+  scaleUpCooldownSeconds: 180
+  scaleDownCooldownSeconds: 600
+  pendingPodTimeoutSeconds: 120
+
+  minNodes: 0
+  maxNodes: 100
+
+  # GCP calls spot instances "preemptible"
+  spotInstancePercentage: 0.6
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: false
+
+  nodePools:
+    # Preemptible pool (spot equivalent)
+    - name: preemptible-pool
+      minSize: 0
+      maxSize: 50
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - n1-standard-8-v100    # 1x V100
+        - n1-standard-16-v100   # 2x V100
+        - a2-highgpu-1g         # 1x A100
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-autoscaler.io/pool: preemptible-pool
+        cloud.google.com/gke-preemptible: "true"
+      availabilityZones:
+        - us-central1-a
+        - us-central1-b
+        - us-central1-c
+
+    # Regular pool
+    - name: regular-pool
+      minSize: 0
+      maxSize: 30
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - n1-standard-8-v100
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-autoscaler.io/pool: regular-pool
+      availabilityZones:
+        - us-central1-a
+        - us-central1-b
+
+---
+# Example: A100 autoscaling on GCP
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: AutoscalingPolicy
+metadata:
+  name: a100-gcp-autoscaling
+spec:
+  enabled: true
+  provider: gcp
+
+  scaleUpThreshold: 0.75
+  scaleDownThreshold: 0.25
+  scaleUpCooldownSeconds: 120
+  scaleDownCooldownSeconds: 600
+  pendingPodTimeoutSeconds: 90
+
+  minNodes: 1
+  maxNodes: 20
+
+  spotInstancePercentage: 0.5
+  enableSpotInstances: true
+  enableMultiTierScaling: true
+  enablePredictiveScaling: true
+
+  nodePools:
+    # A100 preemptible
+    - name: a100-preemptible
+      minSize: 0
+      maxSize: 15
+      gpuType: nvidia-a100-80gb
+      instanceTypes:
+        - a2-highgpu-1g   # 1x A100
+        - a2-highgpu-2g   # 2x A100
+        - a2-highgpu-4g   # 4x A100
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-type: a100
+      availabilityZones:
+        - us-central1-a
+        - us-central1-b
+
+    # A100 regular
+    - name: a100-regular
+      minSize: 1
+      maxSize: 5
+      gpuType: nvidia-a100-80gb
+      instanceTypes:
+        - a2-highgpu-1g
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-type: a100

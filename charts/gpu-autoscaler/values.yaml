@@ -139,29 +139,155 @@ cost:
       enabled: true
       size: 20Gi
 
-# Autoscaling configuration
+# Phase 3: Autoscaling Engine configuration
 autoscaling:
   enabled: true
 
-  # Scale-up triggers
+  # Cloud provider: aws, gcp, azure
+  provider: aws
+
+  # Autoscaler reconciliation interval
+  reconcileInterval: 30s
+
+  # Scale-up configuration
   scaleUp:
-    # Scale up when pending GPU pods exist for > 2 minutes
-    pendingPodThreshold: 2m
-    # Scale up when cluster GPU utilization > 80%
-    utilizationThreshold: 80
+    # GPU utilization threshold to trigger scale-up (0-1)
+    threshold: 0.8
+    # Cooldown period after scale-up
+    cooldown: 3m
+    # Time to wait before scaling up for pending pods
+    pendingPodTimeout: 2m
 
-  # Scale-down triggers
+  # Scale-down configuration
   scaleDown:
-    # Scale down when node idle for > 10 minutes
-    idleThreshold: 10m
-    # Scale down when node GPU utilization < 20%
-    utilizationThreshold: 20
+    # GPU utilization threshold to trigger scale-down (0-1)
+    threshold: 0.2
+    # Cooldown period after scale-down
+    cooldown: 10m
+    # Grace period for pod eviction
+    gracePeriod: 30s
 
-  # Spot instance configuration
+  # Node pool limits
+  limits:
+    # Minimum number of GPU nodes
+    minNodes: 0
+    # Maximum number of GPU nodes
+    maxNodes: 100
+
+  # Spot instance orchestration (Phase 3)
   spot:
     enabled: true
-    # Percentage of workloads to run on spot instances
-    targetPercentage: 60
+    # Target percentage of spot instances (0-1)
+    targetPercentage: 0.6
+    # Enable automatic spot termination handling
+    gracefulEviction: true
+    # Check interval for spot termination notices
+    checkInterval: 5s
+    # Diversify across multiple instance types
+    diversify: true
+
+  # Multi-tier scaling (Phase 3)
+  multiTier:
+    enabled: true
+    # Priority order: spot → on-demand → reserved
+    # Spot instances for majority of workload
+    spotPercentage: 0.6
+    # On-demand for stability
+    onDemandPercentage: 0.35
+    # Reserved instances for baseline (if available)
+    reservedPercentage: 0.05
+
+  # Predictive scaling (Phase 3)
+  predictive:
+    enabled: false
+    # Historical lookback period for pattern analysis
+    lookbackDays: 7
+    # Prediction horizon
+    horizonMinutes: 30
+    # Minimum confidence level to trigger pre-warming (0-1)
+    confidenceThreshold: 0.7
+    # Pre-warm nodes when predicted utilization exceeds this (0-1)
+    preWarmThreshold: 0.7
+
+  # Node pools configuration
+  nodePools:
+    # Spot instance pool (primary)
+    - name: spot-pool
+      enabled: true
+      minSize: 0
+      maxSize: 50
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge  # 1x V100
+        - p3.8xlarge  # 4x V100
+        - g4dn.xlarge # 1x T4 (diversify)
+      capacityType: spot
+      spotPercentage: 1.0
+      priority: 10
+      labels:
+        gpu-autoscaler.io/capacity-type: spot
+        gpu-autoscaler.io/pool: spot-pool
+      availabilityZones:
+        - us-west-2a
+        - us-west-2b
+        - us-west-2c
+
+    # On-demand instance pool (fallback)
+    - name: on-demand-pool
+      enabled: true
+      minSize: 0
+      maxSize: 30
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge
+      capacityType: on-demand
+      priority: 5
+      labels:
+        gpu-autoscaler.io/capacity-type: on-demand
+        gpu-autoscaler.io/pool: on-demand-pool
+      availabilityZones:
+        - us-west-2a
+        - us-west-2b
+
+    # Reserved instance pool (baseline)
+    - name: reserved-pool
+      enabled: false
+      minSize: 2
+      maxSize: 10
+      gpuType: nvidia-tesla-v100
+      instanceTypes:
+        - p3.2xlarge
+      capacityType: reserved
+      priority: 1
+      labels:
+        gpu-autoscaler.io/capacity-type: reserved
+        gpu-autoscaler.io/pool: reserved-pool
+
+  # Cloud provider specific configuration
+  aws:
+    region: us-west-2
+    # Auto Scaling Group names (map to node pools)
+    autoScalingGroups:
+      spot-pool: gpu-spot-asg
+      on-demand-pool: gpu-on-demand-asg
+      reserved-pool: gpu-reserved-asg
+
+  gcp:
+    projectID: ""
+    region: us-central1
+    # Managed Instance Group names (map to node pools)
+    instanceGroups:
+      spot-pool: gpu-spot-mig
+      on-demand-pool: gpu-on-demand-mig
+
+  azure:
+    subscriptionID: ""
+    resourceGroup: ""
+    region: eastus
+    # VM Scale Set names (map to node pools)
+    vmScaleSets:
+      spot-pool: gpu-spot-vmss
+      on-demand-pool: gpu-on-demand-vmss
 
 # Bin-packing configuration (Phase 2)
 binPacking:

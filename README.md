@@ -32,11 +32,12 @@ Organizations running GPU workloads on Kubernetes waste 40-60% of GPU capacity a
 - 🎫 **Admission Webhook**: Zero-touch optimization requiring no workload changes - automatic strategy selection
 - 📋 **GPU Sharing Policies**: CRDs for cluster-wide and namespace-specific optimization policies
 
-### Phase 3: Autoscaling Engine (Coming Soon)
+### Phase 3: Autoscaling Engine (Available Now)
 - 🚀 **GPU-Aware Autoscaling**: Scale based on actual GPU utilization, not just CPU/memory
-- 💸 **Spot Instance Orchestration**: Prioritize cheaper spot instances with graceful eviction
+- 💸 **Spot Instance Orchestration**: Prioritize cheaper spot instances with graceful eviction handling
 - 🎚️ **Multi-Tier Scaling**: Optimize cost with spot → on-demand → reserved instance strategy
-- 🔮 **Predictive Scaling**: Pre-warm nodes for known busy periods
+- 🔮 **Predictive Scaling**: Pre-warm nodes for known busy periods based on historical patterns
+- ☁️ **Multi-Cloud Support**: AWS, GCP, and Azure integrations with Auto Scaling Groups / Managed Instance Groups / VM Scale Sets
 
 ### Phase 4: Cost Management (Coming Soon)
 - 💵 **Real-time Cost Tracking**: Calculate GPU costs per second with cloud pricing APIs
