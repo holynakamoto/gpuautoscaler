@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/gpuautoscaler/gpuautoscaler/pkg/metrics"
-	"github.com/holynakamoto/gpuautoscaler/pkg/scheduler"
-	"github.com/holynakamoto/gpuautoscaler/pkg/sharing"
+	"github.com/gpuautoscaler/gpuautoscaler/pkg/scheduler"
+	"github.com/gpuautoscaler/gpuautoscaler/pkg/sharing"
 )
 
 const (

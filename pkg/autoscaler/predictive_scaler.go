@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/holynakamoto/gpuautoscaler/pkg/metrics"
+	"github.com/gpuautoscaler/gpuautoscaler/pkg/metrics"
 )
 
 const (

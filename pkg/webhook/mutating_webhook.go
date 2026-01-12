@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/holynakamoto/gpuautoscaler/pkg/sharing"
+	"github.com/gpuautoscaler/gpuautoscaler/pkg/sharing"
 )
 
 // GPUOptimizationWebhook is a mutating webhook that automatically optimizes GPU requests

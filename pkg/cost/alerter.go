@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	v1alpha1 "github.com/holynakamoto/gpuautoscaler/pkg/apis/v1alpha1"
+	v1alpha1 "github.com/gpuautoscaler/gpuautoscaler/pkg/apis/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 

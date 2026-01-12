@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/holynakamoto/gpuautoscaler/pkg/apis/v1alpha1"
+	"github.com/gpuautoscaler/gpuautoscaler/pkg/apis/v1alpha1"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
