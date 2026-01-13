@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 
 	"github.com/gpuautoscaler/gpuautoscaler/pkg/cli/cmd"
