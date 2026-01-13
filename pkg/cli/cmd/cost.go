@@ -11,6 +11,7 @@ import (
 	"github.com/gpuautoscaler/gpuautoscaler/pkg/apis/v1alpha1"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -93,6 +94,11 @@ func (o *CostOptions) Run() error {
 	scheme, err := v1alpha1.SchemeBuilder.Build()
 	if err != nil {
 		return fmt.Errorf("failed to build scheme: %w", err)
+	}
+
+	// Register core Kubernetes types
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("failed to add core types to scheme: %w", err)
 	}
 
 	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme})

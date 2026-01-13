@@ -3,6 +3,7 @@ package cost
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -356,12 +357,17 @@ func (ct *CostTracker) GetCostByLabel(labelKey string) map[string]float64 {
 func isGPUPod(pod *corev1.Pod) bool {
 	for _, container := range pod.Spec.Containers {
 		if requests := container.Resources.Requests; requests != nil {
+			// Check for standard GPU resource
 			if _, hasGPU := requests["nvidia.com/gpu"]; hasGPU {
 				return true
 			}
-			if _, hasMIG := requests["nvidia.com/mig-1g.5gb"]; hasMIG {
-				return true
+			// Check for any MIG profile (nvidia.com/mig-*)
+			for resourceName := range requests {
+				if strings.HasPrefix(string(resourceName), "nvidia.com/mig-") {
+					return true
+				}
 			}
+			// Check for MPS shared GPU
 			if _, hasMPS := requests["nvidia.com/gpu-shared"]; hasMPS {
 				return true
 			}

@@ -97,9 +97,10 @@ func (tc *TimescaleDBClient) initializeSchema(ctx context.Context) error {
 		}
 	}
 
-	// Create aggregated views for performance
+	// Create continuous aggregate for hourly summaries
 	_, err = tc.db.ExecContext(ctx, `
-		CREATE MATERIALIZED VIEW IF NOT EXISTS cost_hourly_summary AS
+		CREATE MATERIALIZED VIEW IF NOT EXISTS cost_hourly_summary
+		WITH (timescaledb.continuous) AS
 		SELECT
 			time_bucket('1 hour', time) AS bucket,
 			namespace,
@@ -111,10 +112,23 @@ func (tc *TimescaleDBClient) initializeSchema(ctx context.Context) error {
 			COUNT(DISTINCT pod_name) AS pod_count,
 			SUM(gpu_count) AS total_gpus
 		FROM cost_data
-		GROUP BY bucket, namespace, team, gpu_type, capacity_type;
+		GROUP BY bucket, namespace, team, gpu_type, capacity_type
+		WITH NO DATA;
 	`)
 	if err != nil {
-		logger.V(1).Info("Materialized view may already exist", "error", err.Error())
+		logger.V(1).Info("Hourly summary view may already exist", "error", err.Error())
+	}
+
+	// Add refresh policy for hourly continuous aggregate
+	_, err = tc.db.ExecContext(ctx, `
+		SELECT add_continuous_aggregate_policy('cost_hourly_summary',
+			start_offset => INTERVAL '1 day',
+			end_offset => INTERVAL '5 minutes',
+			schedule_interval => INTERVAL '15 minutes',
+			if_not_exists => TRUE);
+	`)
+	if err != nil {
+		logger.V(1).Info("Hourly refresh policy may already exist", "error", err.Error())
 	}
 
 	// Create continuous aggregate for daily summaries
@@ -127,8 +141,8 @@ func (tc *TimescaleDBClient) initializeSchema(ctx context.Context) error {
 			team,
 			gpu_type,
 			capacity_type,
-			SUM(hourly_rate) / COUNT(*) AS avg_hourly_rate,
-			MAX(cumulative_cost) AS total_cost,
+			AVG(hourly_rate) AS avg_hourly_rate,
+			SUM(cumulative_cost) AS total_cost,
 			AVG(gpu_count) AS avg_gpus
 		FROM cost_data
 		GROUP BY bucket, namespace, team, gpu_type, capacity_type
@@ -244,7 +258,7 @@ func (tc *TimescaleDBClient) InsertCostDataPoint(ctx context.Context, podCost *P
 func (tc *TimescaleDBClient) GetCostByNamespace(ctx context.Context, namespace string, start, end time.Time) (float64, error) {
 	var totalCost float64
 	err := tc.db.QueryRowContext(ctx, `
-		SELECT COALESCE(MAX(cumulative_cost), 0)
+		SELECT COALESCE(SUM(cumulative_cost), 0)
 		FROM cost_data
 		WHERE namespace = $1
 			AND time >= $2
@@ -309,7 +323,7 @@ func (tc *TimescaleDBClient) GetDailyCostByNamespace(ctx context.Context, days i
 		SELECT
 			namespace,
 			time_bucket('1 day', time) AS day,
-			MAX(cumulative_cost) AS cost,
+			SUM(cumulative_cost) AS cost,
 			AVG(gpu_count) AS avg_gpus
 		FROM cost_data
 		WHERE time >= NOW() - INTERVAL '1 day' * $1
@@ -345,7 +359,12 @@ func (tc *TimescaleDBClient) InsertSavingsData(ctx context.Context, namespace, o
 		INSERT INTO cost_savings (
 			time, namespace, optimization_type, savings_amount,
 			baseline_cost, actual_cost, details
-		) VALUES ($1, $2, $3, $4, $5, $6, $7);
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (time, namespace, optimization_type) DO UPDATE SET
+			savings_amount = EXCLUDED.savings_amount,
+			baseline_cost = EXCLUDED.baseline_cost,
+			actual_cost = EXCLUDED.actual_cost,
+			details = EXCLUDED.details;
 	`, time.Now(), namespace, optimizationType, savings, baseline, actual, detailsJSON)
 
 	return err
