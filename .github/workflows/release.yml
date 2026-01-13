@@ -37,9 +37,15 @@ jobs:
             # First release
             NEXT_TAG="v1.0.0"
           fi
-          echo "Creating tag: $NEXT_TAG"
-          git tag $NEXT_TAG
-          git push origin $NEXT_TAG
+          
+          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEXT_TAG already exists. Skipping creation."
+          else
+            echo "Creating tag: $NEXT_TAG"
+            git tag $NEXT_TAG
+            git push origin $NEXT_TAG
+          fi
+          
           echo "new_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
 
       - name: Set up Go
