@@ -16,6 +16,13 @@
     "access": "public"
   },
   "scripts": {
-    "test": "echo \"No tests yet\""
-  }
+    "test": "echo \"No tests yet\"",
+    "postinstall": "node ./scripts/postinstall.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md",
+    "LICENSE"
+  ]
 }
