@@ -11,7 +11,9 @@ import (
 	"github.com/gpuautoscaler/gpuautoscaler/pkg/apis/v1alpha1"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 type CostOptions struct {
@@ -21,14 +23,12 @@ type CostOptions struct {
 	Format    string
 	ShowROI   bool
 	streams   genericclioptions.IOStreams
-	client    client.Client
 }
 
 // NewCostCmd creates the cost command
-func NewCostCmd(streams genericclioptions.IOStreams, k8sClient client.Client) *cobra.Command {
+func NewCostCmd(streams genericclioptions.IOStreams) *cobra.Command {
 	o := &CostOptions{
 		streams: streams,
-		client:  k8sClient,
 		Last:    "7d",
 		Format:  "summary",
 	}
@@ -77,6 +77,29 @@ Examples:
 func (o *CostOptions) Run() error {
 	ctx := context.Background()
 
+	// Create controller-runtime client
+	cfg, err := config.GetConfig()
+	if err != nil {
+		// Fallback to default kubeconfig
+		loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		configOverrides := &clientcmd.ConfigOverrides{}
+		kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+		cfg, err = kubeConfig.ClientConfig()
+		if err != nil {
+			return fmt.Errorf("failed to load kubeconfig: %w", err)
+		}
+	}
+
+	scheme, err := v1alpha1.SchemeBuilder.Build()
+	if err != nil {
+		return fmt.Errorf("failed to build scheme: %w", err)
+	}
+
+	k8sClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		return fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
+
 	fmt.Fprintf(o.streams.Out, "\n")
 	fmt.Fprintf(o.streams.Out, "=================================================================\n")
 	fmt.Fprintf(o.streams.Out, "                     GPU COST REPORT\n")
@@ -84,7 +107,7 @@ func (o *CostOptions) Run() error {
 
 	// Show ROI report if requested
 	if o.ShowROI {
-		return o.showROIReport(ctx)
+		return o.showROIReport(ctx, k8sClient)
 	}
 
 	// Get cost attributions
@@ -101,7 +124,7 @@ func (o *CostOptions) Run() error {
 	}
 	fmt.Fprintf(o.streams.Out, "Period: Last %s\n\n", o.Last)
 
-	if err := o.client.List(ctx, attributions, listOpts...); err != nil {
+	if err := k8sClient.List(ctx, attributions, listOpts...); err != nil {
 		fmt.Fprintf(o.streams.ErrOut, "Error fetching cost data: %v\n", err)
 		fmt.Fprintf(o.streams.Out, "\n⚠️  Cost tracking may not be enabled or configured.\n")
 		fmt.Fprintf(o.streams.Out, "To enable cost tracking:\n")
@@ -139,7 +162,7 @@ func (o *CostOptions) Run() error {
 	}
 
 	// Show budgets status
-	o.showBudgets(ctx)
+	o.showBudgets(ctx, k8sClient)
 
 	// Show savings
 	o.showSavings(filtered)
@@ -272,9 +295,9 @@ func (o *CostOptions) showTopPods(attributions []v1alpha1.CostAttribution) {
 	fmt.Fprintf(o.streams.Out, "\n")
 }
 
-func (o *CostOptions) showBudgets(ctx context.Context) {
+func (o *CostOptions) showBudgets(ctx context.Context, k8sClient client.Client) {
 	budgets := &v1alpha1.CostBudgetList{}
-	if err := o.client.List(ctx, budgets); err != nil {
+	if err := k8sClient.List(ctx, budgets); err != nil {
 		return
 	}
 
@@ -338,7 +361,7 @@ func (o *CostOptions) showSavings(attributions []v1alpha1.CostAttribution) {
 	}
 }
 
-func (o *CostOptions) showROIReport(ctx context.Context) error {
+func (o *CostOptions) showROIReport(ctx context.Context, k8sClient client.Client) error {
 	fmt.Fprintf(o.streams.Out, "Generating ROI report for last %s...\n\n", o.Last)
 
 	// Parse time period
@@ -349,7 +372,7 @@ func (o *CostOptions) showROIReport(ctx context.Context) error {
 
 	// Query cost attributions to aggregate savings
 	attributions := &v1alpha1.CostAttributionList{}
-	if err := o.client.List(ctx, attributions); err != nil {
+	if err := k8sClient.List(ctx, attributions); err != nil {
 		return fmt.Errorf("failed to query cost attributions: %w", err)
 	}
 
