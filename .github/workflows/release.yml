@@ -1,0 +1,57 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main # Trigger on pushes to main
+    tags:
+      - 'v*' # Also trigger on manual version tags
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # svu needs full history to find the last tag
+
+      - name: Install svu
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo 'deb [trusted=yes] https://apt.fury.io/caarlos0/ /' | sudo tee /etc/apt/sources.list.d/caarlos0.list
+          sudo apt update
+          sudo apt install svu
+
+      - name: Tag next version
+        if: github.ref == 'refs/heads/main'
+        id: tag_version
+        run: |
+          # Check if there are any tags
+          if git tag -l | grep -q .; then
+            NEXT_TAG=$(svu next)
+          else
+            # First release
+            NEXT_TAG="v1.0.0"
+          fi
+          echo "Creating tag: $NEXT_TAG"
+          git tag $NEXT_TAG
+          git push origin $NEXT_TAG
+          echo "new_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

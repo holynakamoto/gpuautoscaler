@@ -451,5 +451,9 @@ func getGPUCountForVMSize(vmSize string) int {
 
 // ClearCache removes all cached prices
 func (pc *PricingClient) ClearCache() {
-	pc.priceCache = sync.Map{}
+	// Clear in-place to avoid races with concurrent readers
+	pc.priceCache.Range(func(key, value interface{}) bool {
+		pc.priceCache.Delete(key)
+		return true
+	})
 }

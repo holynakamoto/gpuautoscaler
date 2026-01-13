@@ -75,7 +75,7 @@ func (r *BudgetController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	// Persist to DB
 	if r.DB != nil {
-		r.DB.UpdateBudgetTracking(ctx,
+		if err := r.DB.UpdateBudgetTracking(ctx,
 			budget.Name,
 			getFirstNamespace(budget.Spec.Scope),
 			getFirstTeam(budget.Spec.Scope),
@@ -83,7 +83,13 @@ func (r *BudgetController) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			budget.Status.CurrentSpend,
 			budget.Status.PercentageUsed,
 			budget.Status.BudgetStatus,
-		)
+		); err != nil {
+			logger.Error(err, "Failed to persist budget tracking to database",
+				"budget", budget.Name,
+				"namespace", getFirstNamespace(budget.Spec.Scope),
+				"team", getFirstTeam(budget.Spec.Scope),
+				"monthlyLimit", budget.Spec.MonthlyLimit)
+		}
 	}
 
 	// Requeue after 1 minute for continuous monitoring
@@ -201,36 +207,43 @@ func (r *BudgetController) calculateScopeSpend(ctx context.Context, scope v1alph
 	}
 
 	// Query DB for historical costs up to earliest running pod
+	// To avoid double-counting, prioritize namespace queries over team queries
 	if r.DB != nil && !earliestPodStart.IsZero() {
 		dbEndTime := earliestPodStart
 		if dbEndTime.After(start) {
-			for _, ns := range scope.Namespaces {
-				dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, dbEndTime)
-				if err == nil {
-					totalSpend += dbCost
+			// If namespaces are specified, query by namespace
+			if len(scope.Namespaces) > 0 {
+				for _, ns := range scope.Namespaces {
+					dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, dbEndTime)
+					if err == nil {
+						totalSpend += dbCost
+					}
 				}
-			}
-
-			for _, team := range scope.Teams {
-				dbCost, err := r.DB.GetCostByTeam(ctx, team, start, dbEndTime)
-				if err == nil {
-					totalSpend += dbCost
+			} else if len(scope.Teams) > 0 {
+				// Only query by team if namespaces are not specified
+				for _, team := range scope.Teams {
+					dbCost, err := r.DB.GetCostByTeam(ctx, team, start, dbEndTime)
+					if err == nil {
+						totalSpend += dbCost
+					}
 				}
 			}
 		}
 	} else if r.DB != nil {
 		// No running pods, query full range from DB
-		for _, ns := range scope.Namespaces {
-			dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, end)
-			if err == nil {
-				totalSpend += dbCost
+		if len(scope.Namespaces) > 0 {
+			for _, ns := range scope.Namespaces {
+				dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, end)
+				if err == nil {
+					totalSpend += dbCost
+				}
 			}
-		}
-
-		for _, team := range scope.Teams {
-			dbCost, err := r.DB.GetCostByTeam(ctx, team, start, end)
-			if err == nil {
-				totalSpend += dbCost
+		} else if len(scope.Teams) > 0 {
+			for _, team := range scope.Teams {
+				dbCost, err := r.DB.GetCostByTeam(ctx, team, start, end)
+				if err == nil {
+					totalSpend += dbCost
+				}
 			}
 		}
 	}
@@ -458,10 +471,14 @@ func (r *BudgetController) enforceBudget(ctx context.Context, budget *v1alpha1.C
 		case "block":
 			// Implement blocking logic
 			if err := r.blockNewPods(ctx, budget); err != nil {
-				return fmt.Errorf("failed to block new pods: %w", err)
+				logger.Error(err, "Failed to block new pods", "budget", budget.Name)
+				r.Recorder.Event(budget, corev1.EventTypeWarning, "BudgetBlockFailed",
+					fmt.Sprintf("Failed to block new pods: %v", err))
+				// Don't return error - continue reconciliation
+			} else {
+				r.Recorder.Event(budget, corev1.EventTypeWarning, "BudgetBlocked",
+					"New GPU pods are blocked due to budget limit")
 			}
-			r.Recorder.Event(budget, corev1.EventTypeWarning, "BudgetBlocked",
-				"New GPU pods are blocked due to budget limit")
 		}
 
 		budget.Status.EnforcementActive = true

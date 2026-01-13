@@ -246,6 +246,61 @@ make build
 make dev-cluster
 ```
 
+## 📦 Release Guide
+
+GPU Autoscaler uses automated semantic versioning with [svu](https://github.com/caarlos0/svu) and [GoReleaser](https://goreleaser.com/). Releases are automatically created when commits are pushed to the `main` branch.
+
+### Commit Message Convention
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/) to trigger the correct version bump:
+
+**Patch Release (v1.0.x)** - Bug fixes and minor changes:
+```
+fix: resolve memory leak in cost tracker
+fix(api): handle nil pointer in budget controller
+```
+
+**Minor Release (v1.x.0)** - New features (backward compatible):
+```
+feat: add support for Azure GPU pricing
+feat(cost): implement custom alert templates
+```
+
+**Major Release (vx.0.0)** - Breaking changes:
+```
+feat!: redesign CostBudget API with new fields
+fix!: change default enforcement mode to throttle
+
+BREAKING CHANGE: CostBudget.spec.limit renamed to CostBudget.spec.budget.amount
+```
+
+### Release Process
+
+1. **Merge PR to main**: All commits to `main` trigger the release workflow
+2. **Automatic tagging**: GitHub Actions calculates the next version using `svu` based on commit messages
+3. **Build & publish**: GoReleaser creates:
+   - GitHub Release with binaries (Linux, macOS, Windows)
+   - Changelog from commit messages
+   - Checksums for all artifacts
+
+### Manual Release (if needed)
+
+```bash
+# Create and push a tag manually
+git tag v1.0.5
+git push origin v1.0.5
+
+# The release workflow will trigger automatically
+```
+
+### Release Assets
+
+Each release includes:
+- `gpu-autoscaler-controller` - Kubernetes controller binary (Linux/macOS, amd64/arm64)
+- `gpu-autoscaler` - CLI tool (Linux/macOS/Windows, amd64/arm64)
+- Source code archives
+- SHA256 checksums
+
 ## 📝 License
 
 Apache License 2.0 - see [LICENSE](LICENSE) file for details.
