@@ -183,8 +183,43 @@ func (r *BudgetController) updateBudgetStatus(ctx context.Context, budget *v1alp
 func (r *BudgetController) calculateScopeSpend(ctx context.Context, scope v1alpha1.BudgetScope, start, end time.Time) (float64, error) {
 	var totalSpend float64
 
-	// Prefer DB for historical data if available (avoids double-counting)
-	if r.DB != nil {
+	// Get all running pods to determine non-overlapping time windows
+	pods, err := r.getScopePods(ctx, scope)
+	if err != nil {
+		return 0, err
+	}
+
+	// Find earliest pod start time to avoid DB/tracker overlap
+	var earliestPodStart time.Time
+	for _, pod := range pods {
+		if pod.Status.StartTime != nil {
+			podStart := pod.Status.StartTime.Time
+			if earliestPodStart.IsZero() || podStart.Before(earliestPodStart) {
+				earliestPodStart = podStart
+			}
+		}
+	}
+
+	// Query DB for historical costs up to earliest running pod
+	if r.DB != nil && !earliestPodStart.IsZero() {
+		dbEndTime := earliestPodStart
+		if dbEndTime.After(start) {
+			for _, ns := range scope.Namespaces {
+				dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, dbEndTime)
+				if err == nil {
+					totalSpend += dbCost
+				}
+			}
+
+			for _, team := range scope.Teams {
+				dbCost, err := r.DB.GetCostByTeam(ctx, team, start, dbEndTime)
+				if err == nil {
+					totalSpend += dbCost
+				}
+			}
+		}
+	} else if r.DB != nil {
+		// No running pods, query full range from DB
 		for _, ns := range scope.Namespaces {
 			dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, end)
 			if err == nil {
@@ -198,17 +233,9 @@ func (r *BudgetController) calculateScopeSpend(ctx context.Context, scope v1alph
 				totalSpend += dbCost
 			}
 		}
-
-		return totalSpend, nil
 	}
 
-	// Fallback to in-memory cost tracker if DB not available
-	// Note: This only has costs since tracker started, not full historical range
-	pods, err := r.getScopePods(ctx, scope)
-	if err != nil {
-		return 0, err
-	}
-
+	// Add live costs from CostTracker for running pods
 	for _, pod := range pods {
 		if podCost, ok := r.CostTracker.GetPodCost(pod.Namespace, pod.Name); ok {
 			totalSpend += podCost.TotalCost
@@ -496,20 +523,22 @@ func (r *BudgetController) throttleResources(ctx context.Context, budget *v1alph
 	return nil
 }
 
-// blockNewPods prevents new GPU pod creation
+// blockNewPods prevents new GPU pod creation (NOT YET IMPLEMENTED)
 func (r *BudgetController) blockNewPods(ctx context.Context, budget *v1alpha1.CostBudget) error {
-	// This would be implemented via an admission webhook that checks budget status
-	// For now, just log the action
 	logger := log.FromContext(ctx)
-	logger.Info("Budget blocking activated - admission webhook should reject new GPU pods",
+	logger.Info("Budget blocking requested but not yet implemented",
 		"budget", budget.Name)
 
-	// In a full implementation, this would:
-	// 1. Update a ConfigMap that the admission webhook reads
-	// 2. The webhook would check budget status before allowing pod creation
-	// 3. Reject pods that would exceed budget limits
+	// TODO: Full implementation requires:
+	// 1. Create/update a ConfigMap with budget enforcement state
+	// 2. Integrate with GPUOptimizationWebhook to read the ConfigMap
+	// 3. Webhook should validate pod creation against budget limits
+	// 4. Reject pods that would cause budget to exceed limits
+	//
+	// For now, this enforcement mode only logs the action.
+	// Use "throttle" mode for actual resource limitation.
 
-	return nil
+	return fmt.Errorf("block enforcement mode not yet implemented - use 'throttle' or 'alert' mode instead")
 }
 
 // Helper functions

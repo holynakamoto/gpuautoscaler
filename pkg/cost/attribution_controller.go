@@ -277,25 +277,46 @@ func (r *AttributionController) buildDetailedBreakdown(ctx context.Context, pods
 
 	// Get time-series data from DB (last 24 hours)
 	now := time.Now()
-	for i := 23; i >= 0; i-- {
-		hour := now.Add(time.Duration(-i) * time.Hour)
-		// Simplified - in production, query DB for actual hourly costs
-		breakdown.ByHour = append(breakdown.ByHour, v1alpha1.HourlyCost{
-			Timestamp: metav1.NewTime(hour),
-			Cost:      0.0, // Would query from DB
-			GPUHours:  0.0,
-		})
+	if r.DB != nil {
+		// TODO: Query actual hourly aggregates from TimescaleDB
+		// Example: SELECT hour_bucket, sum(cost), sum(gpu_hours) FROM cost_hourly_summary
+		//          WHERE timestamp >= now() - interval '24 hours'
+		//          GROUP BY hour_bucket ORDER BY hour_bucket
+		for i := 23; i >= 0; i-- {
+			hour := now.Add(time.Duration(-i) * time.Hour)
+			hourStart := time.Date(hour.Year(), hour.Month(), hour.Day(), hour.Hour(), 0, 0, 0, hour.Location())
+			hourEnd := hourStart.Add(time.Hour)
+
+			// Query DB for this hour's cost (method needs to be added to TimescaleDBClient)
+			// cost, gpuHours := r.DB.GetHourlyCost(ctx, hourStart, hourEnd, scope filters)
+			breakdown.ByHour = append(breakdown.ByHour, v1alpha1.HourlyCost{
+				Timestamp: metav1.NewTime(hour),
+				Cost:      0.0, // TODO: Replace with actual DB query result
+				GPUHours:  0.0, // TODO: Replace with actual DB query result
+			})
+		}
 	}
 
 	// Get daily data (last 30 days)
-	for i := 29; i >= 0; i-- {
-		day := now.AddDate(0, 0, -i)
-		breakdown.ByDay = append(breakdown.ByDay, v1alpha1.DailyCost{
-			Date:     day.Format("2006-01-02"),
-			Cost:     0.0, // Would query from DB
-			GPUHours: 0.0,
-			PeakGPUs: 0,
-		})
+	if r.DB != nil {
+		// TODO: Query actual daily aggregates from TimescaleDB
+		// Example: SELECT day_bucket, sum(cost), sum(gpu_hours), max(peak_gpus) FROM cost_daily_summary
+		//          WHERE date >= now() - interval '30 days'
+		//          GROUP BY day_bucket ORDER BY day_bucket
+		for i := 29; i >= 0; i-- {
+			day := now.AddDate(0, 0, -i)
+			dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, day.Location())
+			dayEnd := dayStart.AddDate(0, 0, 1)
+
+			// Query DB for this day's cost (method needs to be added to TimescaleDBClient)
+			// cost, gpuHours, peakGPUs := r.DB.GetDailyCost(ctx, dayStart, dayEnd, scope filters)
+			breakdown.ByDay = append(breakdown.ByDay, v1alpha1.DailyCost{
+				Date:     day.Format("2006-01-02"),
+				Cost:     0.0, // TODO: Replace with actual DB query result
+				GPUHours: 0.0, // TODO: Replace with actual DB query result
+				PeakGPUs: 0,   // TODO: Replace with actual DB query result
+			})
+		}
 	}
 
 	return breakdown
