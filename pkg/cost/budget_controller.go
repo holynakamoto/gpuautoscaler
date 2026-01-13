@@ -397,7 +397,8 @@ func (r *BudgetController) enforceBudget(ctx context.Context, budget *v1alpha1.C
 		exceededTime := getExceededTime(budget)
 		gracePeriod := time.Duration(budget.Spec.Enforcement.GracePeriodMinutes) * time.Minute
 
-		if time.Since(exceededTime) < gracePeriod {
+		// If exceededTime is zero, budget was never exceeded before
+		if !exceededTime.IsZero() && time.Since(exceededTime) < gracePeriod {
 			logger.V(1).Info("Budget exceeded but in grace period",
 				"budget", budget.Name,
 				"remaining", gracePeriod-time.Since(exceededTime),
@@ -532,14 +533,16 @@ func getExceededTime(budget *v1alpha1.CostBudget) time.Time {
 	if budget.Status.ExceededSince != nil {
 		return budget.Status.ExceededSince.Time
 	}
-	// Fallback: find when the budget was first exceeded
+	// Fallback: find earliest alert timestamp
+	var earliestTime time.Time
 	for _, alert := range budget.Status.AlertsFired {
-		if alert.Threshold == 100 {
-			return alert.Timestamp.Time
+		alertTime := alert.Timestamp.Time
+		if earliestTime.IsZero() || alertTime.Before(earliestTime) {
+			earliestTime = alertTime
 		}
 	}
-	// Default to now if not tracked
-	return time.Now()
+	// Return zero time if no alerts (caller should check IsZero())
+	return earliestTime
 }
 
 func isInBudgetScope(policy v1alpha1.AutoscalingPolicy, scope v1alpha1.BudgetScope) bool {

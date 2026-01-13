@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -346,21 +347,76 @@ func (o *CostOptions) showROIReport(ctx context.Context) error {
 		return fmt.Errorf("invalid time period: %w", err)
 	}
 
-	// For now, show placeholder ROI report
-	// In production, this would use the ROIReporter
+	// Query cost attributions to aggregate savings
+	attributions := &v1alpha1.CostAttributionList{}
+	if err := o.client.List(ctx, attributions); err != nil {
+		return fmt.Errorf("failed to query cost attributions: %w", err)
+	}
+
+	// Aggregate totals and savings
+	var totalCost, spotSavings, sharingSavings, autoscalingSavings, wasteEliminated float64
+	for _, attr := range attributions.Items {
+		totalCost += attr.Status.TotalCost
+		spotSavings += attr.Status.Savings.SpotSavings
+		sharingSavings += attr.Status.Savings.SharingSavings
+		autoscalingSavings += attr.Status.Savings.AutoscalingSavings
+		wasteEliminated += attr.Status.Savings.WasteEliminated
+	}
+
+	totalSavings := spotSavings + sharingSavings + autoscalingSavings + wasteEliminated
+	baselineCost := totalCost + totalSavings
+	savingsPercentage := 0.0
+	if baselineCost > 0 {
+		savingsPercentage = (totalSavings / baselineCost) * 100
+	}
+
+	// Calculate ROI metrics
+	investmentCost := 300.0 // Estimated monthly infrastructure cost
+	daysInPeriod := duration.Hours() / 24
+	monthlySavings := totalSavings
+	if daysInPeriod > 0 && daysInPeriod < 30 {
+		monthlySavings = (totalSavings / daysInPeriod) * 30
+	}
+
+	roiPercentage := 0.0
+	paybackDays := 0
+	if investmentCost > 0 {
+		roiPercentage = ((monthlySavings - investmentCost) / investmentCost) * 100
+		if monthlySavings > investmentCost {
+			netMonthlySavings := monthlySavings - investmentCost
+			if netMonthlySavings > 0 {
+				paybackDays = int((investmentCost / netMonthlySavings) * 30)
+			}
+		}
+	}
+	projectedAnnualSavings := monthlySavings * 12
+
+	// Display report
 	fmt.Fprintf(o.streams.Out, "-----------------------------------------------------------------\n")
 	fmt.Fprintf(o.streams.Out, "ROI SUMMARY\n")
 	fmt.Fprintf(o.streams.Out, "-----------------------------------------------------------------\n")
 	fmt.Fprintf(o.streams.Out, "Report Period:           Last %s\n", o.Last)
-	fmt.Fprintf(o.streams.Out, "Total Savings:           Calculated from optimizations\n")
-	fmt.Fprintf(o.streams.Out, "Monthly Investment:      Infrastructure costs\n")
-	fmt.Fprintf(o.streams.Out, "ROI Percentage:          (Savings - Investment) / Investment * 100\n")
-	fmt.Fprintf(o.streams.Out, "Payback Period:          Days to recover investment\n")
+	fmt.Fprintf(o.streams.Out, "Actual Cost:             $%0.2f\n", totalCost)
+	fmt.Fprintf(o.streams.Out, "Baseline Cost:           $%0.2f\n", baselineCost)
+	fmt.Fprintf(o.streams.Out, "Total Savings:           $%0.2f (%.1f%%)\n", totalSavings, savingsPercentage)
 	fmt.Fprintf(o.streams.Out, "\n")
-	fmt.Fprintf(o.streams.Out, "For detailed ROI analysis, ensure cost tracking is fully enabled.\n")
+	fmt.Fprintf(o.streams.Out, "-----------------------------------------------------------------\n")
+	fmt.Fprintf(o.streams.Out, "SAVINGS BREAKDOWN\n")
+	fmt.Fprintf(o.streams.Out, "-----------------------------------------------------------------\n")
+	fmt.Fprintf(o.streams.Out, "Spot Instances:          $%0.2f\n", spotSavings)
+	fmt.Fprintf(o.streams.Out, "GPU Sharing:             $%0.2f\n", sharingSavings)
+	fmt.Fprintf(o.streams.Out, "Autoscaling:             $%0.2f\n", autoscalingSavings)
+	fmt.Fprintf(o.streams.Out, "Waste Elimination:       $%0.2f\n", wasteEliminated)
 	fmt.Fprintf(o.streams.Out, "\n")
-
-	_ = duration // Used in production version
+	fmt.Fprintf(o.streams.Out, "-----------------------------------------------------------------\n")
+	fmt.Fprintf(o.streams.Out, "ROI METRICS\n")
+	fmt.Fprintf(o.streams.Out, "-----------------------------------------------------------------\n")
+	fmt.Fprintf(o.streams.Out, "Monthly Investment:      $%0.2f\n", investmentCost)
+	fmt.Fprintf(o.streams.Out, "Monthly Savings:         $%0.2f\n", monthlySavings)
+	fmt.Fprintf(o.streams.Out, "ROI Percentage:          %.1f%%\n", roiPercentage)
+	fmt.Fprintf(o.streams.Out, "Payback Period:          %d days\n", paybackDays)
+	fmt.Fprintf(o.streams.Out, "Projected Annual:        $%0.2f\n", projectedAnnualSavings)
+	fmt.Fprintf(o.streams.Out, "\n")
 
 	return nil
 }
@@ -369,11 +425,11 @@ func parseDuration(s string) (time.Duration, error) {
 	// Parse duration strings like "1h", "7d", "30d"
 	if strings.HasSuffix(s, "d") {
 		daysStr := strings.TrimSuffix(s, "d")
-		days, err := time.ParseDuration(daysStr + "h")
+		daysFloat, err := strconv.ParseFloat(daysStr, 64)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("invalid day value %q: %w", daysStr, err)
 		}
-		return days * 24, nil
+		return time.Duration(daysFloat * 24 * float64(time.Hour)), nil
 	}
 	return time.ParseDuration(s)
 }

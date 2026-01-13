@@ -144,7 +144,7 @@ func (r *AttributionController) updateAttributionStatus(ctx context.Context, att
 		historicalData = []v1alpha1.CostDataPoint{}
 	}
 
-	savings, err := r.calculateSavings(ctx, attribution)
+	savings, err := r.calculateSavings(ctx, attribution, totalCost)
 	if err != nil {
 		logger.Error(err, "Failed to calculate savings")
 		savings = v1alpha1.SavingsData{}
@@ -327,7 +327,7 @@ func (r *AttributionController) getHistoricalData(ctx context.Context, attributi
 }
 
 // calculateSavings computes cost savings from optimizations
-func (r *AttributionController) calculateSavings(ctx context.Context, attribution *v1alpha1.CostAttribution) (v1alpha1.SavingsData, error) {
+func (r *AttributionController) calculateSavings(ctx context.Context, attribution *v1alpha1.CostAttribution, currentTotalCost float64) (v1alpha1.SavingsData, error) {
 	savings := v1alpha1.SavingsData{}
 
 	if r.DB == nil {
@@ -358,8 +358,8 @@ func (r *AttributionController) calculateSavings(ctx context.Context, attributio
 		}
 	}
 
-	// Calculate baseline cost (what it would have been without optimization)
-	savings.BaselineCost = attribution.Status.TotalCost + savings.TotalSavings
+	// Calculate baseline cost using current cost (not stale status value)
+	savings.BaselineCost = currentTotalCost + savings.TotalSavings
 
 	// Calculate savings percentage
 	if savings.BaselineCost > 0 {
