@@ -8,6 +8,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+# 1. ADD THIS: Permissions for OIDC
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -20,6 +25,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Publish to npm
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+        # 2. REMOVE THE SECRET: You no longer need NODE_AUTH_TOKEN
