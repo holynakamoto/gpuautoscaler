@@ -91,7 +91,12 @@ type AlertChannel struct {
 	Type string `json:"type"`
 
 	// Config contains channel-specific configuration (e.g., webhook URL, email address)
-	Config map[string]string `json:"config"`
+	// +optional
+	Config map[string]string `json:"config,omitempty"`
+
+	// ConfigSecretRefs allows referencing sensitive config values from secrets
+	// +optional
+	ConfigSecretRefs map[string]corev1.SecretKeySelector `json:"configSecretRefs,omitempty"`
 }
 
 // BudgetEnforcement defines actions when budget is exceeded
@@ -151,6 +156,10 @@ type CostBudgetStatus struct {
 
 	// EnforcementActive indicates if enforcement actions are in effect
 	EnforcementActive bool `json:"enforcementActive"`
+
+	// ExceededSince tracks when budget first exceeded 100% (for grace period)
+	// +optional
+	ExceededSince *metav1.Time `json:"exceededSince,omitempty"`
 
 	// LastUpdated is when the status was last calculated
 	LastUpdated metav1.Time `json:"lastUpdated"`

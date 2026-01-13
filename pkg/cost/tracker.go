@@ -188,7 +188,10 @@ func (ct *CostTracker) calculatePodCost(ctx context.Context, pod *corev1.Pod) (*
 
 	// Check cache first
 	if cached, ok := ct.podCostCache.Load(podKey); ok {
-		podCost := cached.(*PodCost)
+		oldCost := cached.(*PodCost)
+
+		// Copy the struct to avoid data race
+		podCost := *oldCost
 
 		// Update cumulative cost based on time elapsed
 		elapsed := time.Since(podCost.LastUpdated)
@@ -196,7 +199,10 @@ func (ct *CostTracker) calculatePodCost(ctx context.Context, pod *corev1.Pod) (*
 		podCost.TotalCost += incrementalCost
 		podCost.LastUpdated = time.Now()
 
-		return podCost, nil
+		// Store the updated copy back
+		ct.podCostCache.Store(podKey, &podCost)
+
+		return &podCost, nil
 	}
 
 	// New pod - calculate from scratch
@@ -245,9 +251,12 @@ func (ct *CostTracker) calculatePodCost(ctx context.Context, pod *corev1.Pod) (*
 	}
 
 	// Determine pod start time
-	startTime := pod.Status.StartTime.Time
-	if startTime.IsZero() {
-		startTime = time.Now()
+	startTime := time.Now()
+	if pod.Status.StartTime != nil {
+		startTime = pod.Status.StartTime.Time
+		if startTime.IsZero() {
+			startTime = time.Now()
+		}
 	}
 
 	// Calculate total cost from start to now

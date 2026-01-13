@@ -131,7 +131,13 @@ func (am *AlertManager) sendSlackAlert(ctx context.Context, channel v1alpha1.Ale
 		return fmt.Errorf("failed to marshal slack message: %w", err)
 	}
 
-	resp, err := am.httpClient.Post(webhookURL, "application/json", bytes.NewBuffer(payload))
+	req, err := http.NewRequestWithContext(ctx, "POST", webhookURL, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create slack request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := am.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send slack alert: %w", err)
 	}
@@ -182,11 +188,13 @@ func (am *AlertManager) sendPagerDutyAlert(ctx context.Context, channel v1alpha1
 		return fmt.Errorf("failed to marshal pagerduty event: %w", err)
 	}
 
-	resp, err := am.httpClient.Post(
-		"https://events.pagerduty.com/v2/enqueue",
-		"application/json",
-		bytes.NewBuffer(payload),
-	)
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://events.pagerduty.com/v2/enqueue", bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create pagerduty request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := am.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send pagerduty alert: %w", err)
 	}

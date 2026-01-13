@@ -145,6 +145,16 @@ func (r *BudgetController) updateBudgetStatus(ctx context.Context, budget *v1alp
 	// Build cost breakdown
 	breakdown := r.buildCostBreakdown(ctx, budget.Spec.Scope)
 
+	// Track when budget first exceeded 100% (for grace period)
+	exceededSince := budget.Status.ExceededSince
+	if budgetStatus == "exceeded" && exceededSince == nil {
+		// First time exceeding budget
+		exceededSince = &metav1.Time{Time: now}
+	} else if budgetStatus != "exceeded" {
+		// No longer exceeded, reset
+		exceededSince = nil
+	}
+
 	// Update status
 	budget.Status = v1alpha1.CostBudgetStatus{
 		CurrentSpend:          currentSpend,
@@ -154,6 +164,7 @@ func (r *BudgetController) updateBudgetStatus(ctx context.Context, budget *v1alp
 		DaysRemaining:         daysRemaining,
 		AlertsFired:           budget.Status.AlertsFired, // Preserve existing
 		EnforcementActive:     budget.Status.EnforcementActive,
+		ExceededSince:         exceededSince,
 		LastUpdated:           metav1.NewTime(now),
 		Breakdown:             breakdown,
 	}
@@ -172,20 +183,7 @@ func (r *BudgetController) updateBudgetStatus(ctx context.Context, budget *v1alp
 func (r *BudgetController) calculateScopeSpend(ctx context.Context, scope v1alpha1.BudgetScope, start, end time.Time) (float64, error) {
 	var totalSpend float64
 
-	// Get all pods matching the scope
-	pods, err := r.getScopePods(ctx, scope)
-	if err != nil {
-		return 0, err
-	}
-
-	// Sum up costs from cost tracker
-	for _, pod := range pods {
-		if podCost, ok := r.CostTracker.GetPodCost(pod.Namespace, pod.Name); ok {
-			totalSpend += podCost.TotalCost
-		}
-	}
-
-	// Also query DB for historical costs in the time range
+	// Prefer DB for historical data if available (avoids double-counting)
 	if r.DB != nil {
 		for _, ns := range scope.Namespaces {
 			dbCost, err := r.DB.GetCostByNamespace(ctx, ns, start, end)
@@ -199,6 +197,21 @@ func (r *BudgetController) calculateScopeSpend(ctx context.Context, scope v1alph
 			if err == nil {
 				totalSpend += dbCost
 			}
+		}
+
+		return totalSpend, nil
+	}
+
+	// Fallback to in-memory cost tracker if DB not available
+	// Note: This only has costs since tracker started, not full historical range
+	pods, err := r.getScopePods(ctx, scope)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, pod := range pods {
+		if podCost, ok := r.CostTracker.GetPodCost(pod.Namespace, pod.Name); ok {
+			totalSpend += podCost.TotalCost
 		}
 	}
 
@@ -515,7 +528,11 @@ func getFirstTeam(scope v1alpha1.BudgetScope) string {
 }
 
 func getExceededTime(budget *v1alpha1.CostBudget) time.Time {
-	// Find when the budget was first exceeded
+	// Use ExceededSince if available
+	if budget.Status.ExceededSince != nil {
+		return budget.Status.ExceededSince.Time
+	}
+	// Fallback: find when the budget was first exceeded
 	for _, alert := range budget.Status.AlertsFired {
 		if alert.Threshold == 100 {
 			return alert.Timestamp.Time

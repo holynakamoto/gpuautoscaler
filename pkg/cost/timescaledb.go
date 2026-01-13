@@ -454,16 +454,20 @@ func labelsToJSON(labels map[string]string) (string, error) {
 	if labels == nil {
 		return "{}", nil
 	}
-	// Convert to JSON string
-	// Simplified - in production, use json.Marshal
-	return "{}", nil
+	data, err := json.Marshal(labels)
+	if err != nil {
+		return "{}", fmt.Errorf("failed to marshal labels: %w", err)
+	}
+	return string(data), nil
 }
 
 func mapToJSON(m map[string]interface{}) (string, error) {
 	if m == nil {
 		return "{}", nil
 	}
-	// Convert to JSON string
-	// Simplified - in production, use json.Marshal
-	return "{}", nil
+	data, err := json.Marshal(m)
+	if err != nil {
+		return "{}", fmt.Errorf("failed to marshal map: %w", err)
+	}
+	return string(data), nil
 }

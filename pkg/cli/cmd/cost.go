@@ -368,8 +368,12 @@ func (o *CostOptions) showROIReport(ctx context.Context) error {
 func parseDuration(s string) (time.Duration, error) {
 	// Parse duration strings like "1h", "7d", "30d"
 	if strings.HasSuffix(s, "d") {
-		days := strings.TrimSuffix(s, "d")
-		return time.ParseDuration(days + "h") // Will multiply by 24
+		daysStr := strings.TrimSuffix(s, "d")
+		days, err := time.ParseDuration(daysStr + "h")
+		if err != nil {
+			return 0, err
+		}
+		return days * 24, nil
 	}
 	return time.ParseDuration(s)
 }
