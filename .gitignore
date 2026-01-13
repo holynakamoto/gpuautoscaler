@@ -53,3 +53,4 @@ temp/
 # Local development
 .local/
 .cache/
+node_modules/

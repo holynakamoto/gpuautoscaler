@@ -42,7 +42,25 @@ builds:
       - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Date={{.Date}}
 
 archives:
-  - format: tar.gz
+  - id: controller-archive
+    builds:
+      - controller
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-controller_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+
+  - id: cli-archive
+    builds:
+      - cli
+    format: tar.gz
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -59,9 +77,6 @@ archives:
 
 checksum:
   name_template: 'checksums.txt'
-
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
