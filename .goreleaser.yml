@@ -1,36 +1,110 @@
-project_name: gpu-autoscaler
+version: 2
 
-build:
-  # Build the CLI from cmd/cli
-  binary: gpu-autoscaler
-  main: ./cmd/cli
-  goos:
-    - linux
-    - darwin
-    - windows
-  goarch:
-    - amd64
-    - arm64
-  env:
-    - CGO_ENABLED=0
-  ldflags:
-    - -s -w -X main.version={{.Version}}
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
 
-archive:
-  format_overrides:
-    - goos: windows
-      format: zip
-  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-  files:
-    - LICENSE
-    - README.md
+builds:
+  - id: controller
+    main: ./cmd/controller
+    binary: gpu-autoscaler-controller
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Version={{.Version}}
+      - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Commit={{.Commit}}
+      - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Date={{.Date}}
+
+  - id: cli
+    main: ./cmd/cli
+    binary: gpu-autoscaler
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Version={{.Version}}
+      - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Commit={{.Commit}}
+      - -X github.com/gpuautoscaler/gpuautoscaler/pkg/version.Date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
 
 checksum:
-  name_template: "checksums.txt"
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Security Updates
+      regexp: '^.*?sec(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Other Changes
+      order: 999
 
 release:
   github:
     owner: holynakamoto
     name: gpuautoscaler
   draft: false
-  prerelease: false
+  prerelease: auto
+  mode: append
+  footer: |
+    ## Installation
+
+    ### Using Helm
+    ```bash
+    helm repo add gpu-autoscaler https://gpuautoscaler.github.io/charts
+    helm install gpu-autoscaler gpu-autoscaler/gpu-autoscaler \
+      --namespace gpu-autoscaler-system \
+      --create-namespace
+    ```
+
+    ### Using CLI Binary
+    Download the appropriate binary for your platform from the assets below and add it to your PATH.
+
+    **Full Changelog**: https://github.com/gpuautoscaler/gpuautoscaler/compare/{{ .PreviousTag }}...{{ .Tag }}
