@@ -124,20 +124,100 @@ grafana:
         access: proxy
         isDefault: true
 
-# Cost tracking (requires TimescaleDB)
+# Phase 4: Cost Management
 cost:
   enabled: false
 
+  # Cloud provider for pricing API
+  cloudProvider: aws  # aws, gcp, azure
+  region: us-east-1
+
+  # Cost tracking interval
+  trackingInterval: 60s
+
+  # TimescaleDB for historical cost data
   timescaledb:
     enabled: false
     # If enabled, deploys TimescaleDB for cost data
-    image:
-      repository: timescale/timescaledb
-      tag: "latest-pg14"
+    host: timescaledb.gpu-autoscaler-system.svc.cluster.local
+    port: 5432
+    database: gpu_costs
+    user: postgres
+    passwordSecret: timescaledb-secret
 
-    persistence:
-      enabled: true
-      size: 20Gi
+    # Deploy TimescaleDB in cluster
+    deploy:
+      enabled: false
+      image:
+        repository: timescale/timescaledb
+        tag: "latest-pg14"
+
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+
+      persistence:
+        enabled: true
+        size: 100Gi
+        storageClass: ""
+
+      # Data retention policy
+      retention:
+        # Keep raw data for 90 days
+        rawDataDays: 90
+        # Keep aggregated data for 1 year
+        aggregatedDataDays: 365
+
+  # Cost attribution configuration
+  attribution:
+    enabled: true
+    # Auto-create attribution resources for namespaces
+    autoCreateForNamespaces: true
+    # Default retention for attribution data
+    defaultRetentionDays: 90
+
+  # Budget management
+  budgets:
+    enabled: true
+    # Default grace period for budget enforcement
+    defaultGracePeriodMinutes: 60
+
+  # Alert channels (can be overridden per budget)
+  alerts:
+    slack:
+      enabled: false
+      webhookURL: ""
+    email:
+      enabled: false
+      smtpHost: ""
+      smtpPort: 587
+      from: ""
+      to: []
+    pagerduty:
+      enabled: false
+      routingKey: ""
+    webhook:
+      enabled: false
+      url: ""
+
+  # ROI reporting
+  roi:
+    enabled: true
+    # Investment cost (autoscaler infrastructure) in USD/month
+    monthlyInvestmentCost: 300
+    # Generate reports interval
+    reportInterval: 24h
+
+  # Pricing cache configuration
+  pricing:
+    # Cache TTL for cloud pricing data
+    cacheTTL: 1h
+    # Fallback to estimated pricing if API fails
+    useEstimatesOnError: true
 
 # Phase 3: Autoscaling Engine configuration
 autoscaling:

@@ -1,0 +1,39 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: CostAttribution
+metadata:
+  name: experiment-bert-training
+spec:
+  # Track costs for specific ML experiment
+  experimentID: exp-bert-2024-001
+
+  # Attribution metadata
+  team: nlp-team
+  project: language-models
+  costCenter: research-ml
+
+  # Additional tags for custom attribution
+  tags:
+    model-type: transformer
+    gpu-requirement: a100
+    priority: high
+
+  retentionDays: 90
+
+---
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: CostAttribution
+metadata:
+  name: experiment-diffusion-training
+spec:
+  experimentID: exp-diffusion-2024-042
+
+  team: vision-team
+  project: image-generation
+  costCenter: research-cv
+
+  tags:
+    model-type: diffusion
+    gpu-requirement: h100
+    dataset: custom-10m
+
+  retentionDays: 90

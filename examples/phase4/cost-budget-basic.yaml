@@ -1,0 +1,59 @@
+apiVersion: gpu-autoscaler.io/v1alpha1
+kind: CostBudget
+metadata:
+  name: ml-training-budget
+spec:
+  # Monthly spending limit in USD
+  monthlyLimit: 10000
+
+  # Define what this budget applies to
+  scope:
+    namespaces:
+      - ml-training
+      - ml-experiments
+    labels:
+      team: ml-engineering
+
+  # Alert thresholds
+  alerts:
+    - name: budget-50-percent
+      thresholdPercent: 50
+      severity: info
+      channels:
+        - type: slack
+          config:
+            webhook_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+    - name: budget-80-percent
+      thresholdPercent: 80
+      severity: warning
+      channels:
+        - type: slack
+          config:
+            webhook_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+        - type: email
+          config:
+            to: "ml-team@company.com"
+
+    - name: budget-100-percent
+      thresholdPercent: 100
+      severity: critical
+      channels:
+        - type: slack
+          config:
+            webhook_url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+        - type: pagerduty
+          config:
+            routing_key: "YOUR_PAGERDUTY_ROUTING_KEY"
+
+  # Enforcement actions when budget is exceeded
+  enforcement:
+    action: throttle  # Options: alert, throttle, block
+    gracePeriodMinutes: 60
+    throttleConfig:
+      blockSpotCreation: false
+      maxSpotInstances: 5
+      preferOnDemand: false
+
+  # Budget is enabled
+  enabled: true

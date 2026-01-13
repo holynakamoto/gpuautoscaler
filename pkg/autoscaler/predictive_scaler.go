@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/holynakamoto/gpuautoscaler/pkg/metrics"
+	"github.com/gpuautoscaler/gpuautoscaler/pkg/metrics"
 )
 
 const (
@@ -136,7 +136,7 @@ func (p *PredictiveScaler) analyzePattern(ctx context.Context, dayOfWeek time.We
 	for current.Before(endTime) {
 		if current.Weekday() == dayOfWeek && current.Hour() == hourOfDay {
 			// Get metrics for this hour
-			gpuMetrics, err := p.metricsCollector.GetGPUMetrics()
+			gpuMetrics, err := p.metricsCollector.GetGPUMetrics(ctx)
 			if err != nil {
 				current = current.Add(24 * time.Hour)
 				continue

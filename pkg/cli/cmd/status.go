@@ -54,7 +54,7 @@ func (o *StatusOptions) Run() error {
 		return fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	_, err = kubernetes.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
