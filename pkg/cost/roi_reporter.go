@@ -287,7 +287,7 @@ func (r *ROIReporter) getOptimizationImpacts(ctx context.Context, period ReportP
 			spotNodes := 0
 			for _, pool := range policy.Spec.NodePools {
 				if pool.CapacityType == "spot" {
-					spotNodes = policy.Status.SpotNodes
+					spotNodes = int(policy.Status.SpotNodes)
 				}
 			}
 

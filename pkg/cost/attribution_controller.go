@@ -285,7 +285,8 @@ func (r *AttributionController) buildDetailedBreakdown(ctx context.Context, pods
 		for i := 23; i >= 0; i-- {
 			hour := now.Add(time.Duration(-i) * time.Hour)
 			hourStart := time.Date(hour.Year(), hour.Month(), hour.Day(), hour.Hour(), 0, 0, 0, hour.Location())
-			hourEnd := hourStart.Add(time.Hour)
+			_ = hourStart // TODO: Use for DB query
+			// hourEnd := hourStart.Add(time.Hour)
 
 			// Query DB for this hour's cost (method needs to be added to TimescaleDBClient)
 			// cost, gpuHours := r.DB.GetHourlyCost(ctx, hourStart, hourEnd, scope filters)
@@ -306,7 +307,8 @@ func (r *AttributionController) buildDetailedBreakdown(ctx context.Context, pods
 		for i := 29; i >= 0; i-- {
 			day := now.AddDate(0, 0, -i)
 			dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, day.Location())
-			dayEnd := dayStart.AddDate(0, 0, 1)
+			_ = dayStart // TODO: Use for DB query
+			// dayEnd := dayStart.AddDate(0, 0, 1)
 
 			// Query DB for this day's cost (method needs to be added to TimescaleDBClient)
 			// cost, gpuHours, peakGPUs := r.DB.GetDailyCost(ctx, dayStart, dayEnd, scope filters)

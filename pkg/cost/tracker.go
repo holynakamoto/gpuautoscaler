@@ -452,16 +452,16 @@ func getSharingFactor(pod *corev1.Pod, mode string) float64 {
 		return 1.0
 	case "mps":
 		// MPS shares GPU - divide cost by number of clients
-		if clients, ok := pod.Annotations["gpu-autoscaler.io/mps-clients"]; ok {
-			// Parse client count and divide
+		if _, ok := pod.Annotations["gpu-autoscaler.io/mps-clients"]; ok {
+			// TODO: Parse client count and divide
 			// Simplified: assume 4 clients average
 			return 0.25
 		}
 		return 0.25
 	case "timeslicing":
 		// Time-slicing - divide by replica count
-		if replicas, ok := pod.Annotations["gpu-autoscaler.io/timeslice-replicas"]; ok {
-			// Parse replicas and divide
+		if _, ok := pod.Annotations["gpu-autoscaler.io/timeslice-replicas"]; ok {
+			// TODO: Parse replicas and divide
 			// Simplified: assume 4 replicas average
 			return 0.25
 		}

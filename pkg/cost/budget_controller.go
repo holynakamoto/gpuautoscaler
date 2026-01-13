@@ -498,13 +498,13 @@ func (r *BudgetController) throttleResources(ctx context.Context, budget *v1alph
 		for i, nodePool := range policy.Spec.NodePools {
 			if nodePool.CapacityType == "spot" {
 				if throttleConfig.BlockSpotCreation {
-					policy.Spec.NodePools[i].MinNodes = 0
-					policy.Spec.NodePools[i].MaxNodes = 0
+					policy.Spec.NodePools[i].MinSize = 0
+					policy.Spec.NodePools[i].MaxSize = 0
 					modified = true
 				} else if throttleConfig.MaxSpotInstances != nil {
-					maxSpot := *throttleConfig.MaxSpotInstances
-					if policy.Spec.NodePools[i].MaxNodes > maxSpot {
-						policy.Spec.NodePools[i].MaxNodes = maxSpot
+					maxSpot := int32(*throttleConfig.MaxSpotInstances)
+					if policy.Spec.NodePools[i].MaxSize > maxSpot {
+						policy.Spec.NodePools[i].MaxSize = maxSpot
 						modified = true
 					}
 				}
