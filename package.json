@@ -1,6 +1,6 @@
 {
   "name": "@holynakamoto/gpuautoscaler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Kubernetes-native GPU Autoscaler: maximize utilization, minimize cloud costs",
   "main": "index.js",  // Change to your actual entry if different (e.g., dist/index.js); placeholder OK for now
   "repository": {
