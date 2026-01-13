@@ -108,13 +108,12 @@ func (r *ROIReporter) GenerateReport(ctx context.Context, period ReportPeriod) (
 		savings.IdleResourceSavings
 
 	// Calculate actual vs baseline costs
-	actualCost, _, err := r.calculateCosts(ctx, period)
+	actualCost, baselineCost, err := r.calculateCosts(ctx, period, report.TotalSavings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate costs: %w", err)
 	}
 	report.ActualCost = actualCost
-	// Baseline is what it would have cost without optimizations
-	report.BaselineCost = actualCost + report.TotalSavings
+	report.BaselineCost = baselineCost
 
 	// Calculate savings percentage
 	if report.BaselineCost > 0 {
@@ -232,14 +231,13 @@ func (r *ROIReporter) calculateSharingSavings(ctx context.Context) float64 {
 	return savings
 }
 
-// calculateCosts returns actual cost (baseline is computed in GenerateReport)
-func (r *ROIReporter) calculateCosts(ctx context.Context, period ReportPeriod) (actual, baseline float64, err error) {
+// calculateCosts returns actual and baseline costs
+func (r *ROIReporter) calculateCosts(ctx context.Context, period ReportPeriod, totalSavings float64) (actual, baseline float64, err error) {
 	// Actual cost is total spent
 	actual = r.costTracker.GetTotalCost()
 
-	// Baseline is computed in GenerateReport as actual + totalSavings
-	// since we need savings data which is calculated separately
-	baseline = 0 // Not used, kept for API compatibility
+	// Baseline is what it would have cost without optimizations
+	baseline = actual + totalSavings
 
 	return actual, baseline, nil
 }
