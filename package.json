@@ -1,6 +1,6 @@
 {
   "name": "@holynakamoto/gpuautoscaler",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Kubernetes-native GPU Autoscaler: maximize utilization, minimize cloud costs",
   "main": "index.js",
   "repository": {
