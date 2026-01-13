@@ -1,0 +1,36 @@
+project_name: gpu-autoscaler
+
+build:
+  # Build the CLI from cmd/cli
+  binary: gpu-autoscaler
+  main: ./cmd/cli
+  goos:
+    - linux
+    - darwin
+    - windows
+  goarch:
+    - amd64
+    - arm64
+  env:
+    - CGO_ENABLED=0
+  ldflags:
+    - -s -w -X main.version={{.Version}}
+
+archive:
+  format_overrides:
+    - goos: windows
+      format: zip
+  name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+  files:
+    - LICENSE
+    - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: holynakamoto
+    name: gpuautoscaler
+  draft: false
+  prerelease: false

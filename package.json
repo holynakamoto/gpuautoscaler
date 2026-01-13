@@ -1,6 +1,6 @@
 {
   "name": "gpuautoscaler",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "bin": {
     "gpuautoscaler": "bin/cli.js"
   },
@@ -17,7 +17,11 @@
   },
   "scripts": {
     "test": "echo \"No tests yet\"",
-    "postinstall": "node ./scripts/postinstall.js"
+    "postinstall": "node ./scripts/install.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "tar": "^6.2.0"
   },
   "files": [
     "bin/",
