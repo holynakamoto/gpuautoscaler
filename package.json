@@ -1,6 +1,9 @@
 {
-  "name": "@holynakamoto/gpuautoscaler",
+  "name": "gpuautoscaler",
   "version": "1.0.3",
+  "bin": {
+    "gpuautoscaler": "bin/cli.js"
+  },
   "description": "Kubernetes-native GPU Autoscaler: maximize utilization, minimize cloud costs",
   "main": "index.js",
   "repository": {
@@ -10,7 +13,7 @@
   "author": "Nick Moore",
   "license": "Apache-2.0",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
   "scripts": {
     "test": "echo \"No tests yet\""
