@@ -1,0 +1,19 @@
+{
+  "name": "@nickmoore/gpuautoscaler",
+  "version": "1.0.0",
+  "description": "Kubernetes-native GPU Autoscaler: maximize utilization, minimize cloud costs",
+  "main": "index.js",  // Change to your actual entry if different (e.g., dist/index.js); placeholder OK for now
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickmoore/gpuautoscaler.git"
+  },
+  "author": "Nick Moore",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "scripts": {
+    "test": "echo \"No tests yet\""  // Optional
+  }
+  // ... keep any other existing fields
+}
