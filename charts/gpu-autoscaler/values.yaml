@@ -7,7 +7,7 @@ controller:
   image:
     repository: gpuautoscaler/controller
     pullPolicy: IfNotPresent
-    tag: "v0.1.0"
+    tag: "v1.0.3"
 
   resources:
     limits:
@@ -83,7 +83,7 @@ prometheus:
 grafana:
   enabled: true
 
-  adminPassword: "admin"  # Change in production!
+  adminPassword: "admin" # Change in production!
 
   persistence:
     enabled: true
@@ -102,14 +102,14 @@ grafana:
     dashboardproviders.yaml:
       apiVersion: 1
       providers:
-      - name: 'gpu-autoscaler'
-        orgId: 1
-        folder: 'GPU Autoscaler'
-        type: file
-        disableDeletion: false
-        editable: true
-        options:
-          path: /var/lib/grafana/dashboards/gpu-autoscaler
+        - name: "gpu-autoscaler"
+          orgId: 1
+          folder: "GPU Autoscaler"
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/gpu-autoscaler
 
   dashboardsConfigMaps:
     gpu-autoscaler: "gpu-autoscaler-dashboards"
@@ -118,18 +118,18 @@ grafana:
     datasources.yaml:
       apiVersion: 1
       datasources:
-      - name: Prometheus
-        type: prometheus
-        url: http://prometheus-operated:9090
-        access: proxy
-        isDefault: true
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-operated:9090
+          access: proxy
+          isDefault: true
 
 # Phase 4: Cost Management
 cost:
   enabled: false
 
   # Cloud provider for pricing API
-  cloudProvider: aws  # aws, gcp, azure
+  cloudProvider: aws # aws, gcp, azure
   region: us-east-1
 
   # Cost tracking interval
@@ -298,8 +298,8 @@ autoscaling:
       maxSize: 50
       gpuType: nvidia-tesla-v100
       instanceTypes:
-        - p3.2xlarge  # 1x V100
-        - p3.8xlarge  # 4x V100
+        - p3.2xlarge # 1x V100
+        - p3.8xlarge # 4x V100
         - g4dn.xlarge # 1x T4 (diversify)
       capacityType: spot
       spotPercentage: 1.0
@@ -377,7 +377,7 @@ binPacking:
   # Run packing analysis interval
   analysisInterval: 5m
   # Enable automatic workload consolidation
-  autoConsolidate: false  # Manual for safety
+  autoConsolidate: false # Manual for safety
 
 # GPU sharing configuration (Phase 2)
 sharing:

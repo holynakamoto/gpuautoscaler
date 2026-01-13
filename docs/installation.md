@@ -81,6 +81,7 @@ kubectl port-forward -n gpu-autoscaler-system svc/grafana 3000:80
 Open http://localhost:3000 in your browser.
 
 Default credentials:
+
 - Username: `admin`
 - Password: Get from secret: `kubectl get secret -n gpu-autoscaler-system grafana -o jsonpath="{.data.admin-password}" | base64 --decode`
 
@@ -96,12 +97,12 @@ Or manually:
 
 ```bash
 # Linux
-curl -LO https://github.com/gpuautoscaler/gpuautoscaler/releases/download/v0.1.0/gpu-autoscaler-linux-amd64
+curl -LO https://github.com/gpuautoscaler/gpuautoscaler/releases/download/v1.0.3/gpu-autoscaler-linux-amd64
 chmod +x gpu-autoscaler-linux-amd64
 sudo mv gpu-autoscaler-linux-amd64 /usr/local/bin/gpu-autoscaler
 
 # macOS
-curl -LO https://github.com/gpuautoscaler/gpuautoscaler/releases/download/v0.1.0/gpu-autoscaler-darwin-amd64
+curl -LO https://github.com/gpuautoscaler/gpuautoscaler/releases/download/v1.0.3/gpu-autoscaler-darwin-amd64
 chmod +x gpu-autoscaler-darwin-amd64
 sudo mv gpu-autoscaler-darwin-amd64 /usr/local/bin/gpu-autoscaler
 ```
@@ -180,19 +181,21 @@ For autoscaling on AWS, the controller needs IAM permissions:
 # IAM Policy
 {
   "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "autoscaling:DescribeAutoScalingGroups",
-        "autoscaling:SetDesiredCapacity",
-        "ec2:DescribeInstances",
-        "ec2:DescribeSpotInstanceRequests",
-        "pricing:GetProducts"
-      ],
-      "Resource": "*"
-    }
-  ]
+  "Statement":
+    [
+      {
+        "Effect": "Allow",
+        "Action":
+          [
+            "autoscaling:DescribeAutoScalingGroups",
+            "autoscaling:SetDesiredCapacity",
+            "ec2:DescribeInstances",
+            "ec2:DescribeSpotInstanceRequests",
+            "pricing:GetProducts",
+          ],
+        "Resource": "*",
+      },
+    ],
 }
 ```
 
@@ -271,6 +274,7 @@ kubectl logs -n gpu-autoscaler-system daemonset/dcgm-exporter
 ```
 
 Common issues:
+
 - NVIDIA drivers not installed
 - DCGM already running (conflict)
 - Insufficient permissions
@@ -284,6 +288,7 @@ kubectl logs -n gpu-autoscaler-system deployment/gpu-autoscaler-controller
 ```
 
 Common issues:
+
 - Cannot connect to Prometheus
 - RBAC permissions missing
 - Invalid configuration
@@ -291,12 +296,15 @@ Common issues:
 ### No Metrics in Grafana
 
 1. Check Prometheus is scraping DCGM exporter:
+
    ```bash
    kubectl port-forward -n gpu-autoscaler-system svc/prometheus-operated 9090:9090
    ```
+
    Open http://localhost:9090 and query: `DCGM_FI_DEV_GPU_UTIL`
 
 2. Check ServiceMonitor is created:
+
    ```bash
    kubectl get servicemonitor -n gpu-autoscaler-system
    ```

@@ -2,8 +2,8 @@ apiVersion: v2
 name: gpu-autoscaler
 description: A Kubernetes-native system to maximize GPU cluster utilization and minimize costs
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 1.0.3
+appVersion: "1.0.3"
 keywords:
   - gpu
   - nvidia
