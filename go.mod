@@ -1,6 +1,6 @@
 module github.com/gpuautoscaler/gpuautoscaler
 
-go 1.23
+go 1.23.0
 
 toolchain go1.24.7
 
@@ -73,7 +73,6 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
