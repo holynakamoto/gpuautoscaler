@@ -1,8 +1,9 @@
 name: Publish to GitHub Packages
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*.*.*'   # or 'v*' to match all v-prefixed tags
 
 jobs:
   publish:
