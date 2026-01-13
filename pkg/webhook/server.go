@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -34,7 +35,7 @@ func ValidateWebhookConfiguration(ctx context.Context, client client.Client) err
 	// Check if webhook service exists
 	svc := &corev1.Service{}
 	if err := client.Get(ctx,
-		client.ObjectKey{
+		types.NamespacedName{
 			Name:      "gpu-autoscaler-webhook-service",
 			Namespace: "gpu-autoscaler-system",
 		},
@@ -45,7 +46,7 @@ func ValidateWebhookConfiguration(ctx context.Context, client client.Client) err
 	// Check if webhook has valid TLS configuration
 	secret := &corev1.Secret{}
 	if err := client.Get(ctx,
-		client.ObjectKey{
+		types.NamespacedName{
 			Name:      "webhook-server-cert",
 			Namespace: "gpu-autoscaler-system",
 		},

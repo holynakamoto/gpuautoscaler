@@ -39,11 +39,15 @@ Organizations running GPU workloads on Kubernetes waste 40-60% of GPU capacity a
 - 🔮 **Predictive Scaling**: Pre-warm nodes for known busy periods based on historical patterns
 - ☁️ **Multi-Cloud Support**: AWS, GCP, and Azure integrations with Auto Scaling Groups / Managed Instance Groups / VM Scale Sets
 
-### Phase 4: Cost Management (Coming Soon)
-- 💵 **Real-time Cost Tracking**: Calculate GPU costs per second with cloud pricing APIs
-- 📊 **Cost Attribution**: Track spend by namespace, label, experiment ID
-- 🎯 **Budget Management**: Set limits with alerts and enforcement
-- 📈 **ROI Reporting**: Demonstrate savings from optimization
+### Phase 4: Cost Management (Available Now)
+- 💵 **Real-time Cost Tracking**: Per-second GPU cost calculation with AWS/GCP/Azure pricing APIs
+- 📊 **Cost Attribution**: Track spend by namespace, team, label, and experiment ID with historical data
+- 🎯 **Budget Management**: Set spending limits with configurable alerts (Slack, Email, PagerDuty, Webhook)
+- 🚨 **Budget Enforcement**: Throttle or block workloads when budgets are exceeded with grace periods
+- 💾 **TimescaleDB Integration**: Store historical cost data with hypertables and continuous aggregates
+- 📈 **ROI Reporting**: Demonstrate savings from MIG/MPS/time-slicing optimizations with detailed breakdowns
+- 🔍 **Cost Drill-Down**: Analyze costs by node, GPU model, workload type, and time period
+- 📊 **Grafana Dashboards**: Pre-built cost dashboards with hourly rate, budget burn rate, and attribution charts
 
 ## 🚀 Quick Start
 
@@ -94,6 +98,81 @@ gpu-autoscaler optimize
 
 # View cost breakdown
 gpu-autoscaler cost --namespace ml-team --last 7d
+```
+
+### Cost Management Setup
+
+```bash
+# Enable cost tracking with cloud provider credentials
+helm upgrade gpu-autoscaler gpu-autoscaler/gpu-autoscaler \
+  --namespace gpu-autoscaler-system \
+  --set cost.enabled=true \
+  --set cost.provider=aws \
+  --set cost.region=us-west-2
+
+# Configure TimescaleDB for historical data (optional)
+helm upgrade gpu-autoscaler gpu-autoscaler/gpu-autoscaler \
+  --set cost.timescaledb.enabled=true \
+  --set cost.timescaledb.host=timescaledb.default.svc.cluster.local \
+  --set cost.timescaledb.database=gpucost
+
+# Create a cost budget with alerts
+cat <<EOF | kubectl apply -f -
+apiVersion: v1alpha1.gpuautoscaler.io
+kind: CostBudget
+metadata:
+  name: ml-team-monthly-budget
+spec:
+  scope:
+    type: namespace
+    namespaceSelector:
+      matchLabels:
+        team: ml-team
+  budget:
+    amount: 50000.0  # $50K/month
+    period: 30d
+  alerts:
+    - threshold: 80
+      channels:
+        - type: slack
+          config:
+            webhook: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+    - threshold: 100
+      channels:
+        - type: email
+          config:
+            to: ml-team-leads@company.com
+  enforcement:
+    mode: throttle  # Options: alert, throttle, block
+    gracePeriod: 2h
+    throttleConfig:
+      maxSpotInstances: 5
+      blockOnDemand: true
+EOF
+
+# Create cost attribution tracking
+cat <<EOF | kubectl apply -f -
+apiVersion: v1alpha1.gpuautoscaler.io
+kind: CostAttribution
+metadata:
+  name: ml-team-attribution
+spec:
+  scope:
+    type: namespace
+    namespaceSelector:
+      matchLabels:
+        team: ml-team
+  trackBy:
+    - namespace
+    - label:experiment-id
+    - label:user
+  reportingPeriod: 24h
+EOF
+
+# View cost reports
+gpu-autoscaler cost report --format table
+gpu-autoscaler cost report --format json > cost-report.json
+gpu-autoscaler cost roi --last 30d
 ```
 
 ## 📊 Results
@@ -186,9 +265,15 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 ## 📊 Project Status
 
-**Current Phase**: Phase 1 - Observability Foundation
+**Current Phase**: Phase 4 - Cost Management ✅
 
-See our [roadmap](ROADMAP.md) for planned features and timeline.
+All four phases are now complete:
+- ✅ Phase 1: Observability Foundation
+- ✅ Phase 2: Intelligent Packing
+- ✅ Phase 3: Autoscaling Engine
+- ✅ Phase 4: Cost Management
+
+See our [roadmap](ROADMAP.md) for future enhancements and planned features.
 
 ---
 

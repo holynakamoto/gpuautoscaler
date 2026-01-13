@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -436,7 +435,7 @@ func (r *AutoscalerController) isGPUPod(pod *corev1.Pod) bool {
 
 // getAverageGPUUtilization returns the average GPU utilization across all nodes
 func (r *AutoscalerController) getAverageGPUUtilization(ctx context.Context) (float64, error) {
-	gpuMetrics, err := r.MetricsCollector.GetGPUMetrics()
+	gpuMetrics, err := r.MetricsCollector.GetGPUMetrics(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -470,7 +469,7 @@ func (r *AutoscalerController) countUnderutilizedNodes(ctx context.Context, node
 
 // getNodeGPUUtilization returns the average GPU utilization for a node
 func (r *AutoscalerController) getNodeGPUUtilization(ctx context.Context, nodeName string) (float64, error) {
-	gpuMetrics, err := r.MetricsCollector.GetGPUMetrics()
+	gpuMetrics, err := r.MetricsCollector.GetGPUMetrics(ctx)
 	if err != nil {
 		return 0, err
 	}
