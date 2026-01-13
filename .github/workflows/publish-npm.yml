@@ -2,7 +2,11 @@ name: Publish to npm
 
 on:
   release:
-    types: [published]
+    types: [published, released, created]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -14,7 +18,7 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Publish to npm
         run: npm publish --access public
         env:
