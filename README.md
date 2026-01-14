@@ -84,12 +84,31 @@ kubectl port-forward -n gpu-autoscaler-system svc/gpu-autoscaler-grafana 3000:80
 # Default credentials: admin / (see secret)
 ```
 
+### Install the CLI Tool
+
+Choose your preferred installation method:
+
+**Homebrew (macOS/Linux)**
+```bash
+brew install holynakamoto/tap/gpu-autoscaler
+```
+
+**Install Script (Linux/macOS)**
+```bash
+curl -sSL https://raw.githubusercontent.com/holynakamoto/gpuautoscaler/main/install.sh | bash
+```
+
+**Go Install (for developers)**
+```bash
+go install github.com/holynakamoto/gpuautoscaler/cmd/cli@latest
+```
+
+**Manual Download**
+Download pre-built binaries from the [latest release](https://github.com/holynakamoto/gpuautoscaler/releases/latest)
+
 ### View GPU Metrics
 
 ```bash
-# Install the CLI tool
-curl -sSL https://gpuautoscaler.io/install.sh | bash
-
 # Check cluster GPU utilization
 gpu-autoscaler status
 

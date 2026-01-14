@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write  # Required for npm trusted publishing
 
 jobs:
   goreleaser:
@@ -44,18 +43,9 @@ jobs:
           else
             echo "Creating tag: $NEXT_TAG"
 
-            # Update package.json version (remove 'v' prefix)
-            VERSION=${NEXT_TAG#v}
-            npm version $VERSION --no-git-tag-version
-
-            # Commit the version bump
+            # Create and push the tag
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add package.json package-lock.json
-            git commit -m "chore: bump version to $VERSION" || true
-            git push origin main || true
-
-            # Create and push the tag
             git tag $NEXT_TAG
             git push origin $NEXT_TAG
           fi
@@ -82,34 +72,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upgrade npm for Trusted Publishing
-        if: github.ref == 'refs/heads/main'
-        run: |
-          sudo npm install -g npm@latest
-          node --version
-          npm --version
-
-      - name: Verify OIDC environment
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "OIDC Token Request URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:-(not set)}"
-          echo "Workflow: ${{ github.workflow }}"
-          echo "Repository: ${{ github.repository }}"
-          echo ""
-          echo "⚠️  If publish fails with ENEEDAUTH, configure Trusted Publisher at:"
-          echo "   https://www.npmjs.com/package/gpuautoscaler/access"
-          echo ""
-          echo "Required settings:"
-          echo "  - Repository Owner: holynakamoto"
-          echo "  - Repository Name: gpuautoscaler"
-          echo "  - Workflow filename: release.yml"
-          echo "  - Environment: (leave blank)"
-
-      - name: Install npm dependencies
-        if: github.ref == 'refs/heads/main'
-        run: npm ci
-
-      - name: Publish to npm with OIDC
-        if: github.ref == 'refs/heads/main'
-        run: npm publish --provenance --access public

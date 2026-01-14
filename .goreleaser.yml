@@ -101,6 +101,24 @@ changelog:
     - title: Other Changes
       order: 999
 
+brews:
+  - name: gpu-autoscaler
+    ids:
+      - cli
+    repository:
+      owner: holynakamoto
+      name: homebrew-tap
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: https://github.com/holynakamoto/gpuautoscaler
+    description: "Kubernetes-native GPU Autoscaler: maximize utilization, minimize cloud costs"
+    license: Apache-2.0
+    skip_upload: auto
+    test: |
+      system "#{bin}/gpu-autoscaler", "version"
+    install: |
+      bin.install "gpu-autoscaler"
+
 release:
   github:
     owner: holynakamoto
@@ -111,6 +129,16 @@ release:
   footer: |
     ## Installation
 
+    ### Using Homebrew (macOS/Linux)
+    ```bash
+    brew install holynakamoto/tap/gpu-autoscaler
+    ```
+
+    ### Using install script (Linux/macOS)
+    ```bash
+    curl -sSL https://raw.githubusercontent.com/holynakamoto/gpuautoscaler/main/install.sh | bash
+    ```
+
     ### Using Helm
     ```bash
     helm repo add gpu-autoscaler https://gpuautoscaler.github.io/charts
@@ -119,7 +147,7 @@ release:
       --create-namespace
     ```
 
-    ### Using CLI Binary
+    ### Manual Binary Download
     Download the appropriate binary for your platform from the assets below and add it to your PATH.
 
     **Full Changelog**: https://github.com/gpuautoscaler/gpuautoscaler/compare/{{ .PreviousTag }}...{{ .Tag }}
