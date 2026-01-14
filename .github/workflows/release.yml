@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write  # Required for npm trusted publishing
 
 jobs:
   goreleaser:
@@ -81,3 +82,22 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js for npm publish
+        if: github.ref == 'refs/heads/main'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install npm dependencies
+        if: github.ref == 'refs/heads/main'
+        run: npm ci
+
+      - name: Upgrade npm for Trusted Publishing
+        if: github.ref == 'refs/heads/main'
+        run: npm install -g npm@latest
+
+      - name: Publish to npm
+        if: github.ref == 'refs/heads/main'
+        run: npm publish --provenance --access public
