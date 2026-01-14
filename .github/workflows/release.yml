@@ -6,6 +6,7 @@ on:
       - main # Trigger on pushes to main
     tags:
       - 'v*' # Also trigger on manual version tags
+  workflow_dispatch: # Allow manual triggering
 
 permissions:
   contents: write
