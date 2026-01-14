@@ -24,6 +24,7 @@ GPU workload placement.`,
 	rootCmd.AddCommand(NewOptimizeCmd(streams))
 	rootCmd.AddCommand(NewCostCmd(streams))
 	rootCmd.AddCommand(NewReportCmd(streams))
+	rootCmd.AddCommand(NewVersionCmd(streams))
 
 	return rootCmd
 }
