@@ -86,7 +86,7 @@ jobs:
       - name: Upgrade npm for Trusted Publishing
         if: github.ref == 'refs/heads/main'
         run: |
-          npm install -g npm@latest
+          sudo npm install -g npm@latest
           node --version
           npm --version
 
