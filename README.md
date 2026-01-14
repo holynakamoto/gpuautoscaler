@@ -90,7 +90,7 @@ Choose your preferred installation method:
 
 **Homebrew (macOS/Linux)**
 ```bash
-brew install holynakamoto/tap/gpu-autoscaler
+brew install holynakamoto/gpuautoscaler
 ```
 
 **Install Script (Linux/macOS)**
