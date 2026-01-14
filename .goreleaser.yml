@@ -104,7 +104,7 @@ changelog:
 brews:
   - name: gpuautoscaler
     ids:
-      - cli
+      - cli-archive
     repository:
       owner: holynakamoto
       name: homebrew-gpuautoscaler
