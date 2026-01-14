@@ -61,6 +61,13 @@ jobs:
 
           echo "new_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
 
+      - name: Checkout tagged commit
+        if: github.ref == 'refs/heads/main' && steps.tag_version.outputs.new_tag != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag_version.outputs.new_tag }}
+          fetch-depth: 0
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
