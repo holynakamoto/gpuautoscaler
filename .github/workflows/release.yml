@@ -37,15 +37,28 @@ jobs:
             # First release
             NEXT_TAG="v1.0.0"
           fi
-          
+
           if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
             echo "Tag $NEXT_TAG already exists. Skipping creation."
           else
             echo "Creating tag: $NEXT_TAG"
+
+            # Update package.json version (remove 'v' prefix)
+            VERSION=${NEXT_TAG#v}
+            npm version $VERSION --no-git-tag-version
+
+            # Commit the version bump
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add package.json package-lock.json
+            git commit -m "chore: bump version to $VERSION" || true
+            git push origin main || true
+
+            # Create and push the tag
             git tag $NEXT_TAG
             git push origin $NEXT_TAG
           fi
-          
+
           echo "new_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
 
       - name: Set up Go
