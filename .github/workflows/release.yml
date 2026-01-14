@@ -83,21 +83,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js for npm publish
+      - name: Upgrade npm for Trusted Publishing
         if: github.ref == 'refs/heads/main'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          # Note: No registry-url for Trusted Publishing - OIDC handles auth
+        run: |
+          npm install -g npm@latest
+          node --version
+          npm --version
 
       - name: Install npm dependencies
         if: github.ref == 'refs/heads/main'
         run: npm ci
 
-      - name: Upgrade npm for Trusted Publishing
-        if: github.ref == 'refs/heads/main'
-        run: npm install -g npm@latest
-
-      - name: Publish to npm
+      - name: Publish to npm with OIDC
         if: github.ref == 'refs/heads/main'
         run: npm publish --provenance --access public
