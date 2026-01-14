@@ -102,12 +102,12 @@ changelog:
       order: 999
 
 brews:
-  - name: gpu-autoscaler
+  - name: gpuautoscaler
     ids:
       - cli
     repository:
       owner: holynakamoto
-      name: homebrew-tap
+      name: homebrew-gpuautoscaler
       token: "{{ .Env.GITHUB_TOKEN }}"
     folder: Formula
     homepage: https://github.com/holynakamoto/gpuautoscaler
@@ -131,7 +131,7 @@ release:
 
     ### Using Homebrew (macOS/Linux)
     ```bash
-    brew install holynakamoto/tap/gpu-autoscaler
+    brew install holynakamoto/gpuautoscaler
     ```
 
     ### Using install script (Linux/macOS)
