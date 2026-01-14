@@ -108,7 +108,7 @@ brews:
     repository:
       owner: holynakamoto
       name: homebrew-gpuautoscaler
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: https://github.com/holynakamoto/gpuautoscaler
     description: "Kubernetes-native GPU Autoscaler: maximize utilization, minimize cloud costs"
