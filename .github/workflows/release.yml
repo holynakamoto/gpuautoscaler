@@ -90,6 +90,22 @@ jobs:
           node --version
           npm --version
 
+      - name: Verify OIDC environment
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "OIDC Token Request URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:-(not set)}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Repository: ${{ github.repository }}"
+          echo ""
+          echo "⚠️  If publish fails with ENEEDAUTH, configure Trusted Publisher at:"
+          echo "   https://www.npmjs.com/package/gpuautoscaler/access"
+          echo ""
+          echo "Required settings:"
+          echo "  - Repository Owner: holynakamoto"
+          echo "  - Repository Name: gpuautoscaler"
+          echo "  - Workflow filename: release.yml"
+          echo "  - Environment: (leave blank)"
+
       - name: Install npm dependencies
         if: github.ref == 'refs/heads/main'
         run: npm ci
